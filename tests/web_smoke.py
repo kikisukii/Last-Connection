@@ -96,7 +96,11 @@ with sync_playwright() as p:
         im=Image.open(io.BytesIO(canvas.screenshot())).convert('RGB')
         return sum(near_color(pixel,(104,226,180)) for pixel in im.crop((600,90,850,110)).get_flattened_data())
     assert debug_pixels()==0, 'Debug visible by default'
+    page.evaluate("""() => { window.addEventListener('keydown', event => {
+        window.testF1DefaultPrevented = event.key==='F1' && event.defaultPrevented;
+    }, {once:true}); }""")
     canvas.press('F1'); page.wait_for_timeout(60)
+    assert page.evaluate('window.testF1DefaultPrevented'), 'F1 may open browser help'
     assert debug_pixels()>20, 'F1 did not enable debug'
     canvas.press('F1'); page.wait_for_timeout(60)
     assert debug_pixels()==0, 'F1 did not hide debug'

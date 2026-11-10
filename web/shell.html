@@ -175,6 +175,8 @@
     };
     canvas.addEventListener('click',()=>canvas.focus({preventScroll:true}));
     window.addEventListener('keydown',event=>{
+      // F1 belongs to the debug UI while this game page has focus.
+      if(event.key==='F1') { event.preventDefault(); return; }
       if(!['ArrowLeft','ArrowRight','Enter',' '].includes(event.key)) return;
       if(document.body.dataset.screen!=='playing') {
         event.preventDefault();event.stopImmediatePropagation();
