@@ -1,0 +1,104 @@
+name: Build and deploy Web Demo
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['docs/**', 'README.md', 'AGENTS.md']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  EMSCRIPTEN_VERSION: '4.0.23'
+
+jobs:
+  build:
+    name: Build Web
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Set up pinned Emscripten
+        shell: bash
+        run: |
+          git clone --depth 1 --branch "$EMSCRIPTEN_VERSION" https://github.com/emscripten-core/emsdk.git "$RUNNER_TEMP/emsdk"
+          "$RUNNER_TEMP/emsdk/emsdk" install "$EMSCRIPTEN_VERSION"
+          "$RUNNER_TEMP/emsdk/emsdk" activate "$EMSCRIPTEN_VERSION"
+      - name: Configure and build WebAssembly
+        shell: bash
+        run: |
+          source "$RUNNER_TEMP/emsdk/emsdk_env.sh"
+          emcc --version
+          cmake --version
+          emcmake cmake -S . -B build/web -G Ninja -DCMAKE_BUILD_TYPE=Release -DPLATFORM=Web
+          cmake --build build/web --target last_connection --parallel 2
+          python3 scripts/package_web.py
+      - name: Install isolated browser test dependencies
+        run: |
+          python3 -m pip install -r tests/browser-requirements.txt
+          python3 -m playwright install --with-deps chromium
+      - name: Test packaged site in Chromium
+        run: |
+          python3 -m http.server 8000 --bind 127.0.0.1 --directory build/pages > /tmp/site-server.log 2>&1 &
+          python3 tests/web_smoke.py http://127.0.0.1:8000/ --output build/local-browser-evidence
+      - name: Save local browser evidence
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: local-browser-evidence
+          path: build/local-browser-evidence
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: build/pages
+  deploy:
+    name: Deploy Pages
+    # Enabled after the owner explicitly authorized Public visibility and Pages.
+    if: vars.PAGES_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    needs: build
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+      - name: Deploy Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+  verify:
+    name: Verify public browser demo
+    runs-on: ubuntu-24.04
+    needs: deploy
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Install isolated browser test dependencies
+        run: |
+          python3 -m pip install -r tests/browser-requirements.txt
+          python3 -m playwright install --with-deps chromium
+      - name: Play deployed Pages URL in fresh Chromium
+        env:
+          PLAY_URL: ${{ needs.deploy.outputs.page_url }}
+        run: python3 tests/web_smoke.py "$PLAY_URL" --output build/public-browser-evidence
+      - name: Save external browser evidence
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: public-browser-evidence
+          path: build/public-browser-evidence

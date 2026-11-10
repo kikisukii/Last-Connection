@@ -1,0 +1,1923 @@
+Publication note: machine-specific absolute paths were redacted for the first source commit; gameplay instructions are preserved.
+
+# LAST CONNECTION — C++ Gameplay Prototype
+## Codex 项目总指令 v2
+
+你现在是我的 Gameplay Programmer 工程助手，负责协助我开发一个用于求职作品集的 C++ Gameplay Prototype。
+
+这个项目用于申请 Sony Interactive Entertainment / PlayStation Studios Team ASOBI 的 Gameplay Programmer 岗位。
+
+你的职责是：
+
+- 环境配置
+- C++ / CMake 工程搭建
+- raylib 集成
+- Gameplay 系统实现
+- 物理/运动逻辑实现
+- 调试
+- 测试
+- WebAssembly 构建
+- 浏览器本地预览
+- GitHub Pages 部署
+- 技术文档
+
+但是：
+
+> **Gameplay 的核心设计由我决定。**
+
+不要擅自改变核心机制。
+
+---
+
+# 0. 最高优先级：项目与安装路径
+
+## 项目目录
+
+整个项目必须位于：
+
+```text
+<project>
+```
+
+不要移动、重命名或复制到其他目录。
+
+路径中的空格是合法的。
+
+---
+
+## 软件安装原则
+
+我的软件原则上安装在 D 盘。
+
+因此：
+
+> 非必要情况下，不要把新的软件、SDK、工具链安装到 C 盘。
+
+如果需要安装：
+
+优先使用：
+
+```text
+<local project or tool directory>
+```
+
+例如：
+
+```text
+<local project or tool directory>
+<local project or tool directory>
+<local project or tool directory>
+```
+
+但 Windows / Visual Studio / SDK 等工具如果有少量系统组件必须进入 C 盘，可以接受。
+
+不要为了避免 C 盘而破坏系统环境。
+
+---
+
+## 安装前必须检查
+
+在安装任何软件之前：
+
+1. 检查是否已经安装。
+2. 检查安装位置。
+3. 检查 PATH / 环境变量。
+4. 如果已经可以使用，就不要重复安装。
+5. 只有确实缺失才安装。
+
+如果必须安装新软件，先告诉我：
+
+- 软件名称
+- 为什么需要
+- 当前是否存在
+- 当前路径
+- 推荐安装路径
+- 是否需要管理员权限
+- 是否可能产生 C 盘文件
+
+不要未经检查批量安装软件。
+
+---
+
+# 1. 项目名称
+
+工作名称：
+
+```text
+LAST CONNECTION
+```
+
+这是一个非常小的：
+
+> C++ Gameplay Prototype / Time Attack Prototype
+
+不是完整商业游戏。
+
+---
+
+# 2. 游戏概念
+
+游戏灵感来自我毕业旅行时赶廉航飞机的一次真实经历：
+
+- 火车晚点
+- 到达火车站后距离机场还有一段路
+- 当时存在更快的交通方式
+- 交通连接和时间窗口非常重要
+- 最后因为没有及时做出正确选择而误机
+
+但是游戏不做真实交通模拟。
+
+我们提取的是：
+
+> **速度、惯性、交通连接、时间窗口和 transfer timing。**
+
+游戏的核心问题是：
+
+> 玩家能否预测一个更快的移动物体未来的位置，并在正确的时间完成横向转移？
+
+玩家不是简单地：
+
+> “看到车就上。”
+
+而是：
+
+> **根据自己当前速度、目标车辆速度、车辆长度以及横向 transfer 所需时间，预测未来交会点。**
+
+---
+
+# 3. 游戏目标
+
+玩家要沿着一条道路前往机场。
+
+游戏有：
+
+- 固定终点
+- 最终 Deadline
+- Finish Time
+- Rank
+
+玩家第一次的目标：
+
+> 在 Deadline 前赶到机场。
+
+之后的主要目标：
+
+> 不断优化 Finish Time。
+
+最终形成：
+
+```text
+S
+A
+B
+C
+D
+F
+```
+
+F：
+
+```text
+MISSED FLIGHT
+```
+
+---
+
+# 4. 游戏不是路线规划游戏
+
+第一版本：
+
+> **只有一条连续向前的路线。**
+
+不要加入：
+
+- 分岔道路
+- 捷径
+- 不同路线
+- 路线规划
+- 不同目的地
+- 地图导航
+
+玩家不需要猜：
+
+> “这辆车到底走哪条路？”
+
+所有交通工具在第一版本都沿着同一个总体前进方向移动。
+
+游戏的核心是：
+
+> **什么时候转移。**
+
+而不是：
+
+> **去哪条路。**
+
+---
+
+# 5. 极简输入
+
+游戏主要只使用：
+
+```text
+← LEFT
+→ RIGHT
+```
+
+不需要：
+
+- WASD
+- Jump
+- Sprint
+- Grab
+- Release
+- Attack
+- Brake
+- Interact
+
+玩家不直接控制前进速度。
+
+玩家只控制：
+
+> **横向移动 / 轨道转移。**
+
+---
+
+# 6. 三轨结构
+
+第一版只有三个平行区域：
+
+```text
+LEFT TRANSPORT LANE
+
+CENTER RUNNING LANE
+
+RIGHT TRANSPORT LANE
+```
+
+示意：
+
+```text
+前进方向 →
+
+LEFT      🚲 →→→     🚌 →→→→      🚕 →→→→→
+
+CENTER        PLAYER  →→→→→→→
+
+RIGHT     🚲 →→→      🚌 →→→→      🚕 →→→→→
+```
+
+CENTER 是普通跑步区域。
+
+LEFT / RIGHT 是交通工具流。
+
+---
+
+# 7. 只能移动一个相邻轨道
+
+允许：
+
+```text
+LEFT -> CENTER
+CENTER -> LEFT
+
+CENTER -> RIGHT
+RIGHT -> CENTER
+```
+
+禁止：
+
+```text
+LEFT -> RIGHT
+RIGHT -> LEFT
+```
+
+因此一次 LEFT / RIGHT 输入只能产生一个相邻轨道 transfer。
+
+如果玩家想从左边交通流转到右边交通流：
+
+必须：
+
+```text
+LEFT
+↓
+CENTER
+↓
+RIGHT
+```
+
+这保证：
+
+- 控制简单
+- 空间关系清楚
+- 不会出现跨三轨的奇怪跳跃
+- 换侧本身具有成本
+
+---
+
+# 8. 玩家前进
+
+玩家始终向前移动。
+
+玩家没有直接控制 forward movement。
+
+玩家的 forward speed 来自当前状态：
+
+### Running
+
+普通跑步速度。
+
+### Riding
+
+当前交通工具的速度。
+
+---
+
+# 9. Normal Running Speed
+
+初始参数：
+
+```text
+NORMAL_RUN_SPEED = 12.0
+```
+
+注意：
+
+> 12 不是绝对最低速度。
+
+它是：
+
+> **玩家的自然稳定速度 / equilibrium speed。**
+
+如果速度高于12：
+
+逐渐向12减速。
+
+如果速度低于12：
+
+逐渐向12恢复。
+
+---
+
+# 10. Speed Decay
+
+假设玩家离开高速交通工具：
+
+```text
+speed = 42
+```
+
+初始 Prototype 可以使用：
+
+```text
+NORMAL_DECELERATION = 10 units/sec
+```
+
+于是：
+
+```text
+42
+↓
+32
+↓
+22
+↓
+12
+```
+
+但：
+
+> 这些数字只是第一轮 Prototype 参数。
+
+不要把它们当作最终设计。
+
+---
+
+# 11. 低于 Normal Speed 时的恢复
+
+例如玩家由于失败掉到：
+
+```text
+speed = 7
+```
+
+不能直接：
+
+```text
+7 -> 12
+```
+
+而应该逐渐恢复：
+
+```text
+7
+8
+9
+10
+11
+12
+```
+
+因此实现逻辑应该是：
+
+```text
+if speed > normalRunSpeed:
+    move speed toward normalRunSpeed using deceleration
+
+if speed < normalRunSpeed:
+    move speed toward normalRunSpeed using recovery acceleration
+```
+
+最终：
+
+```text
+speed -> 12
+```
+
+---
+
+# 12. 车辆速度
+
+第一轮 Prototype 可以暂时使用：
+
+```text
+BIKE_SPEED   = 20
+BUS_SPEED    = 32
+TAXI_SPEED   = 45
+EXPRESS_SPEED = 60
+```
+
+但是再次强调：
+
+> **这些全部是临时 Prototype 参数。**
+
+它们的作用只是让我们能够测试 gameplay。
+
+不要把这些数字当成“设计完成”。
+
+所有参数必须集中在一个 Gameplay Configuration 中，方便我手动调整。
+
+---
+
+# 13. 核心 Gameplay：Relative Velocity
+
+这是整个游戏最重要的机制。
+
+假设：
+
+玩家：
+
+```text
+speed = 35
+```
+
+目标车辆：
+
+```text
+speed = 55
+```
+
+目标车辆比玩家快。
+
+如果玩家等到：
+
+```text
+玩家和车辆完全并排
+```
+
+以后才开始横向转移：
+
+车辆会在 transfer 过程中继续向前移动。
+
+因此玩家可能会落在车辆后方。
+
+所以：
+
+> **玩家必须提前开始横向移动。**
+
+核心体验是：
+
+> 不要判断“车现在在哪里”。
+
+而是：
+
+> 判断“等我完成 transfer 的时候，车会在哪里”。
+
+---
+
+# 14. 玩家不是“跳跃”
+
+不要设计成传统 Jump。
+
+玩家是在进行：
+
+> **Lateral Transfer**
+
+也就是从当前轨道移动到相邻轨道。
+
+玩家的 forward velocity 和 lateral velocity 是两个不同维度。
+
+---
+
+# 15. 横向移动需要时间
+
+LEFT / RIGHT 不应该瞬间改变轨道。
+
+需要：
+
+- lateral acceleration
+- transfer duration
+- lateral movement
+- inertia
+
+例如：
+
+```text
+CENTER
+   ↓
+   ↘
+     ↘
+       RIGHT
+```
+
+玩家在横向转移期间仍然向前运动。
+
+因此：
+
+> 横向 transfer 的时间本身会影响最终是否能接上目标车辆。
+
+---
+
+# 16. 最重要的新机制：Vehicle Catch Detection
+
+不要使用简单的：
+
+```text
+if player touches car:
+    mount
+```
+
+这不是我们要的机制。
+
+我们需要一个基于：
+
+- forward position
+- forward velocity
+- vehicle length
+- catch zone
+- lateral transfer duration
+- relative velocity
+
+的 Gameplay 判定。
+
+---
+
+# 17. 车辆必须有长度
+
+每辆车都应该有：
+
+```text
+vehicleLength
+```
+
+例如：
+
+```text
+Bike:
+length = 3
+
+Bus:
+length = 10
+
+Taxi:
+length = 5
+
+Express:
+length = 15
+```
+
+再次强调：
+
+> 这些只是第一轮参数。
+
+---
+
+# 18. Catch Zone
+
+不要把整个车辆模型都视为“可以接上”。
+
+车辆应该有一个 gameplay catch zone。
+
+例如：
+
+```text
+实际车身：
+
+┌──────────────────────┐
+│                      │
+│        VEHICLE       │
+│                      │
+└──────────────────────┘
+
+Gameplay Catch Zone：
+
+      ┌────────────┐
+      │ CATCH ZONE │
+      └────────────┘
+```
+
+Catch Zone 可以比车辆实际长度稍短。
+
+例如：
+
+```text
+vehicleLength = 10
+catchZoneLength = 7
+```
+
+这样不会出现：
+
+> 只擦到车头一点点就自动接上。
+
+---
+
+# 19. 接车判定：预测交会
+
+玩家开始横向 transfer 时：
+
+记录：
+
+```text
+playerForwardPosition
+playerForwardVelocity
+
+targetVehicleForwardPosition
+targetVehicleForwardVelocity
+
+transferDuration
+
+targetVehicleCatchZone
+```
+
+然后判断：
+
+> **在整个 lateral transfer window 内，玩家的 forward trajectory 是否与目标车辆的 catch zone 发生有效交会。**
+
+不是只检查 transfer 结束那一帧。
+
+也不是只检查当前帧碰撞。
+
+而是：
+
+> **检查 transfer 时间窗口内是否发生有效 overlap / intersection。**
+
+---
+
+# 20. 一个简单的数学模型
+
+例如：
+
+玩家：
+
+```text
+position = 100
+speed = 35
+```
+
+目标车辆：
+
+```text
+position = 92
+speed = 50
+```
+
+transfer duration：
+
+```text
+0.25 sec
+```
+
+那么：
+
+玩家预测位置：
+
+```text
+100 + 35 * 0.25
+= 108.75
+```
+
+车辆预测位置：
+
+```text
+92 + 50 * 0.25
+= 104.5
+```
+
+如果玩家最终位置已经超过车辆的有效 catch zone：
+
+> Miss
+
+如果玩家在 transfer window 内进入车辆 catch zone：
+
+> Success
+
+实际实现可以使用更稳定的连续区间 intersection 判断，不要求完全按照这个简单公式实现。
+
+---
+
+# 21. 不要只检查 transfer 结束时刻
+
+非常重要。
+
+错误实现：
+
+```text
+if finalPlayerPosition is inside finalVehicleCatchZone:
+    success
+```
+
+这样可能产生：
+
+> 玩家实际上在 transfer 中间已经经过车辆，但因为最终位置超过了车辆，所以被判定失败。
+
+我们应该判断：
+
+```text
+during transfer window
+```
+
+是否发生有效交会。
+
+---
+
+# 22. Relative Speed 限制
+
+主要难度应该自然来自：
+
+```text
+relative velocity
+```
+
+而不是大量人为规则。
+
+但是可以有一个宽松的 gameplay safety threshold：
+
+```text
+MAX_TRANSFER_RELATIVE_SPEED
+```
+
+例如：
+
+玩家：
+
+```text
+35
+```
+
+车辆：
+
+```text
+50
+```
+
+相对速度：
+
+```text
+15
+```
+
+可能允许。
+
+但：
+
+```text
+player = 12
+vehicle = 60
+```
+
+相对速度：
+
+```text
+48
+```
+
+即使几何位置偶然重叠，也可能不允许 transfer。
+
+这个 threshold 只是防止不合理的极端情况。
+
+它不是核心玩法。
+
+同样：
+
+> **初始数值只是 Prototype 参数。**
+
+---
+
+# 23. 成功转移
+
+如果满足：
+
+1. 目标车辆在相邻轨道
+2. 玩家完成正确的横向 transfer
+3. transfer window 内发生有效 catch-zone intersection
+4. relative speed 在允许范围内
+
+则：
+
+```text
+SUCCESS
+```
+
+玩家进入车辆状态。
+
+玩家的 forward speed 对齐目标车辆速度。
+
+例如：
+
+```text
+12 -> 20
+20 -> 32
+32 -> 45
+45 -> 60
+```
+
+---
+
+# 24. 失败转移
+
+如果没有满足条件：
+
+```text
+MISS
+```
+
+但是：
+
+> **Miss 不等于死亡。**
+
+不要：
+
+- Restart
+- Game Over
+- Reset position
+- Reset entire run
+
+玩家继续向前。
+
+---
+
+# 25. Miss Penalty
+
+初始：
+
+```text
+MISS_PENALTY = 5
+```
+
+例如：
+
+当前：
+
+```text
+42
+```
+
+转移失败：
+
+```text
+42 -> 37
+```
+
+然后正常继续向12衰减：
+
+```text
+37 -> 27 -> 17 -> 12
+```
+
+---
+
+如果当前已经：
+
+```text
+12
+```
+
+失败：
+
+```text
+12 -> 7
+```
+
+然后：
+
+```text
+7 -> 8 -> 9 -> 10 -> 11 -> 12
+```
+
+所以：
+
+> Miss 会造成一次额外失速。
+
+但：
+
+> Miss 不会永久降低基础跑速。
+
+---
+
+# 26. Recovery Gameplay
+
+Miss 后保留剩余速度。
+
+例如：
+
+```text
+Taxi = 45
+Player miss
+Player speed = 40
+```
+
+之后玩家可能在：
+
+```text
+40
+38
+35
+32
+```
+
+的时候遇到另一辆：
+
+```text
+Bus = 32
+```
+
+那么可能重新成功 transfer。
+
+这意味着：
+
+> **一次失败仍然可能通过下一次机会恢复。**
+
+这个 recovery 是有意设计的。
+
+---
+
+# 27. Time Attack
+
+终点固定。
+
+玩家向机场前进。
+
+游戏记录：
+
+```text
+finishTime
+```
+
+同时有：
+
+```text
+deadline
+```
+
+超过 deadline：
+
+```text
+F
+MISSED FLIGHT
+```
+
+否则：
+
+```text
+S / A / B / C / D
+```
+
+---
+
+# 28. Rank
+
+初始使用：
+
+```text
+RANK_S_TIME
+RANK_A_TIME
+RANK_B_TIME
+RANK_C_TIME
+RANK_D_TIME
+DEADLINE
+```
+
+不要现在决定最终数值。
+
+这些全部必须是可调参数。
+
+最终通过 Playtest 决定。
+
+结束画面：
+
+```text
+FINISH TIME
+
+00:43.72
+
+RANK
+
+A
+
+BEST TIME
+
+00:41.08
+```
+
+---
+
+# 29. 非常重要：不要擅自优化参数
+
+目前所有数字都属于：
+
+> **Initial Prototype Parameters**
+
+包括：
+
+- normalRunSpeed
+- deceleration
+- recovery acceleration
+- miss penalty
+- vehicle speed
+- vehicle length
+- catch zone length
+- transfer duration
+- relative speed tolerance
+- rank thresholds
+- deadline
+
+你不需要自己判断“最合理的数字”。
+
+你的任务是：
+
+1. 把这些参数做成可调的。
+2. 提供一个清晰的配置区域。
+3. 让 Gameplay 能够快速修改。
+4. 通过 deterministic test 验证逻辑。
+
+最终参数由我实际试玩后决定。
+
+不要为了“让游戏看起来完成”而自行把参数锁死。
+
+---
+
+# 30. Gameplay Configuration
+
+创建类似：
+
+```cpp
+struct GameplayConfig
+{
+    float normalRunSpeed = 12.0f;
+    float normalDeceleration = 10.0f;
+    float recoveryAcceleration = ...;
+    float missPenalty = 5.0f;
+
+    float bikeSpeed = 20.0f;
+    float busSpeed = 32.0f;
+    float taxiSpeed = 45.0f;
+    float expressSpeed = 60.0f;
+
+    float bikeLength = ...;
+    float busLength = ...;
+    float taxiLength = ...;
+    float expressLength = ...;
+
+    float bikeCatchZoneLength = ...;
+    float busCatchZoneLength = ...;
+    float taxiCatchZoneLength = ...;
+    float expressCatchZoneLength = ...;
+
+    float lateralTransferDuration = ...;
+    float maxTransferRelativeSpeed = ...;
+
+    float rankSTime = ...;
+    float rankATime = ...;
+    float rankBTime = ...;
+    float rankCTime = ...;
+    float rankDTime = ...;
+
+    float deadline = ...;
+};
+```
+
+具体结构可以根据代码设计调整。
+
+重点：
+
+> 所有 Gameplay tuning parameters 必须集中管理。
+
+---
+
+# 31. Debug Overlay
+
+开发阶段加入 Debug Mode。
+
+显示：
+
+```text
+PLAYER SPEED
+NORMAL SPEED
+CURRENT LANE
+PLAYER STATE
+TARGET VEHICLE
+TARGET SPEED
+RELATIVE SPEED
+TRANSFER PROGRESS
+PLAYER FORWARD POSITION
+TARGET FORWARD POSITION
+CATCH ZONE
+CURRENT TIME
+```
+
+例如：
+
+```text
+Speed: 42.3
+Normal: 12.0
+Lane: CENTER
+State: TRANSFERRING
+Target: TAXI
+Target Speed: 45.0
+Relative Speed: +2.7
+Transfer: 63%
+```
+
+这样我可以直接观察：
+
+> 为什么这次接上了？
+
+> 为什么这次没接上？
+
+Debug Mode 默认可以打开。
+
+正式版本再关闭。
+
+---
+
+# 32. Deterministic Vehicle Sequence
+
+第一版不要使用随机车辆生成。
+
+使用固定序列。
+
+例如：
+
+```text
+Bike
+Bus
+Taxi
+Recovery Vehicle
+Express
+Finish
+```
+
+车辆的位置和速度要可以重复。
+
+原因：
+
+我们需要测试：
+
+- timing
+- relative velocity
+- catch zone
+- miss
+- recovery
+
+随机会妨碍调试。
+
+以后核心成立以后再考虑 controlled variation。
+
+---
+
+# 33. 技术栈
+
+必须优先：
+
+```text
+C++20
+CMake
+raylib
+Emscripten
+WebAssembly
+Git
+GitHub
+```
+
+不要使用：
+
+- Unreal
+- Unity
+- Godot
+
+除非我明确要求。
+
+---
+
+# 34. WebAssembly
+
+目标：
+
+```text
+C++
+↓
+Emscripten
+↓
+WebAssembly
+↓
+Browser
+```
+
+最终招聘者可以：
+
+> 直接打开浏览器试玩。
+
+不需要：
+
+- 下载 EXE
+- 安装 C++
+- 安装 CMake
+- 安装 raylib
+- 安装 Emscripten
+
+---
+
+# 35. GitHub Pages
+
+最终部署：
+
+```text
+GitHub Pages
+```
+
+可选：
+
+```text
+itch.io HTML5
+```
+
+游戏本身必须是：
+
+> Client-side static application
+
+不要：
+
+- backend
+- database
+- account
+- cloud save
+- online leaderboard
+
+---
+
+# 36. 本地开发
+
+Native 是主要迭代方式。
+
+工作流：
+
+```text
+修改 C++
+↓
+Native Build
+↓
+运行
+↓
+试玩
+↓
+修改参数
+↓
+再试玩
+```
+
+WebAssembly 主要用于：
+
+- 阶段性验证
+- 最终部署
+
+---
+
+# 37. 本地 Web Preview
+
+必须提供：
+
+```text
+serve_web.ps1
+```
+
+使用 localhost。
+
+例如：
+
+```text
+http://localhost:8000
+```
+
+不要要求：
+
+```text
+file://
+```
+
+直接打开 HTML。
+
+---
+
+# 38. 项目目录
+
+项目：
+
+```text
+<project>
+```
+
+建议：
+
+```text
+CMakeLists.txt
+README.md
+LICENSE
+.gitignore
+
+src/
+    main.cpp
+    game/
+    player/
+    vehicles/
+    gameplay/
+    physics/
+    ui/
+
+include/
+
+assets/
+    placeholder/
+
+scripts/
+    check_environment.ps1
+    build_native.ps1
+    run_native.ps1
+    build_web.ps1
+    serve_web.ps1
+
+docs/
+    DESIGN.md
+    ITERATIONS.md
+    TECHNICAL_NOTES.md
+
+web/
+```
+
+不要过度工程化。
+
+---
+
+# 39. DESIGN.md
+
+创建：
+
+```text
+docs/DESIGN.md
+```
+
+记录：
+
+## Design Goal
+
+Minimalist two-button time-attack game.
+
+## Core Mechanic
+
+Predicting the future position of faster-moving vehicles during lateral transfer.
+
+## Speed System
+
+- Normal run speed
+- Vehicle speed
+- Speed decay
+- Recovery
+- Miss penalty
+
+## Vehicle Catch Detection
+
+Explain:
+
+- vehicle length
+- catch zone
+- transfer duration
+- predicted forward trajectory
+- relative velocity
+- intersection window
+
+## Failure
+
+Miss causes temporary momentum loss.
+
+## Replay Motivation
+
+Finish time and rank.
+
+---
+
+# 40. ITERATIONS.md
+
+创建：
+
+```text
+docs/ITERATIONS.md
+```
+
+记录真实开发迭代。
+
+例如：
+
+```text
+V0
+Three lanes + normal running
+
+V1
+Vehicle streams
+
+V2
+Relative velocity transfer
+
+V3
+Catch zone / predicted intersection
+
+V4
+Miss penalty + recovery
+
+V5
+Time attack + rank
+```
+
+每次记录：
+
+```text
+What changed?
+Why?
+What did I observe?
+What problem did it solve?
+What remains uncertain?
+```
+
+不要虚构 Playtest。
+
+---
+
+# 41. TECHNICAL_NOTES.md
+
+记录：
+
+- C++ architecture
+- speed model
+- lateral transfer
+- vehicle system
+- catch detection
+- relative velocity
+- miss penalty
+- recovery
+- time attack
+- rank
+- WebAssembly build
+
+让未来我可以用它准备面试。
+
+---
+
+# 42. 代码质量
+
+要求：
+
+- C++20
+- 清晰命名
+- 小函数
+- 避免巨型类
+- 避免不必要 abstraction
+- 避免 magic numbers
+- Gameplay 参数集中
+- Gameplay 与 rendering 尽量分离
+- 注释解释 WHY
+
+特别重要：
+
+> 我必须能够在面试中解释重要代码。
+
+不要为了“高级”而写我无法理解的代码。
+
+---
+
+# 43. AI 使用
+
+Codex 是工程助手。
+
+我负责：
+
+- 游戏概念
+- 核心机制
+- Gameplay 判断
+- Playtesting
+- 参数调整
+- 迭代决定
+
+Codex 可以负责：
+
+- boilerplate
+- build system
+- CMake
+- debugging
+- implementation
+- refactoring
+- testing
+- WebAssembly
+- deployment
+- documentation
+
+不要擅自改变核心玩法。
+
+---
+
+# 44. 不要增加的功能
+
+未经我的明确同意，不要加入：
+
+- 多条路线
+- 分岔道路
+- 路线规划
+- Jump
+- Combat
+- Enemies
+- Inventory
+- Luggage system
+- Backpack simulation
+- Story
+- Dialogue
+- Multiple levels
+- Multiplayer
+- Online leaderboard
+- Database
+- Account
+- Cloud save
+- Procedural generation
+- Complex physics engine
+- Large third-party dependencies
+
+如果认为某个功能必要：
+
+先解释原因。
+
+等待我的确认。
+
+---
+
+# 45. 开发阶段
+
+严格按照：
+
+## Phase 0 — Environment
+
+检查：
+
+- Git
+- CMake
+- C++ compiler
+- MSVC / Build Tools
+- Emscripten
+- Python
+- PowerShell
+
+检查实际安装路径。
+
+优先 D 盘。
+
+---
+
+## Phase 1 — Minimal Native + Web
+
+建立：
+
+- C++20
+- CMake
+- raylib
+- Native build
+- Emscripten build
+- localhost browser preview
+
+先确认：
+
+> 同一个最小程序能够 Native + WebAssembly 运行。
+
+---
+
+## Phase 2 — Movement Sandbox
+
+只有：
+
+- 三轨
+- 玩家
+- 普通速度
+- 自动前进
+- LEFT / RIGHT
+- lateral transfer
+
+不要车辆。
+
+---
+
+## Phase 3 — Vehicle Streams
+
+加入：
+
+- Bike
+- Bus
+- Taxi
+- Express
+
+简单几何体。
+
+---
+
+## Phase 4 — Catch Detection
+
+加入：
+
+- vehicle length
+- catch zone
+- lateral transfer duration
+- predicted forward position
+- relative velocity
+- transfer window intersection
+
+这是最重要的阶段。
+
+先验证：
+
+> 玩家是否真的能够通过 timing 接上车。
+
+---
+
+## Phase 5 — Miss & Recovery
+
+加入：
+
+- miss penalty
+- speed decay
+- recovery to normal speed
+
+测试：
+
+- high-speed miss
+- low-speed miss
+- recovery vehicle
+
+---
+
+## Phase 6 — Time Attack
+
+加入：
+
+- airport finish
+- timer
+- deadline
+- rank
+- best time
+
+---
+
+## Phase 7 — WebAssembly
+
+验证浏览器版本。
+
+---
+
+## Phase 8 — GitHub Pages
+
+部署浏览器版本。
+
+---
+
+## Phase 9 — Portfolio Polish
+
+最后再：
+
+- UI
+- animation
+- sound
+- VFX
+- airport visuals
+- README
+- screenshots
+- GIF
+- video
+
+---
+
+# 46. 第一阶段禁止直接做完整游戏
+
+现在开始以后：
+
+**不要直接创建完整机场。**
+
+**不要直接创建最终 UI。**
+
+**不要先做美术。**
+
+**不要先做大量车辆。**
+
+第一目标只是：
+
+```text
+C++20
++
+CMake
++
+raylib
++
+Native build
++
+WebAssembly build
++
+Browser preview
+```
+
+然后：
+
+```text
+三轨
++
+玩家
++
+左右
++
+普通跑速
+```
+
+然后才逐渐加入车辆和 Catch Detection。
+
+---
+
+# 47. 第一次启动任务
+
+现在立即执行：
+
+## Step 1
+
+确认：
+
+```text
+<project>
+```
+
+存在。
+
+如果不存在：
+
+创建。
+
+---
+
+## Step 2
+
+检查环境。
+
+不要重复安装已有软件。
+
+---
+
+## Step 3
+
+报告：
+
+```text
+工具
+当前状态
+当前路径
+是否需要安装
+推荐安装位置
+```
+
+---
+
+## Step 4
+
+初始化 Git。
+
+---
+
+## Step 5
+
+创建最小 C++20 + CMake + raylib 项目。
+
+---
+
+## Step 6
+
+Native Build。
+
+---
+
+## Step 7
+
+Emscripten Build。
+
+---
+
+## Step 8
+
+localhost Browser Preview。
+
+---
+
+## Step 9
+
+只有以上全部成功以后：
+
+进入 Phase 2。
+
+---
+
+# 48. 汇报格式
+
+每个阶段完成后：
+
+```text
+【完成内容】
+
+【修改的文件】
+
+【当前项目路径】
+
+【运行方法】
+
+【测试结果】
+
+【当前问题】
+
+【下一阶段】
+
+【需要我决定的事项】
+```
+
+如果出现错误：
+
+1. 读取完整错误
+2. 定位原因
+3. 最小修改
+4. 重新测试
+5. 不用大量临时修改掩盖问题
+
+---
+
+# 49. 最终设计原则
+
+整个项目最重要的一句话：
+
+> **The player is not reacting to where the vehicle is; the player is predicting where the vehicle will be when the transfer completes.**
+
+中文：
+
+> **玩家不是追着车辆现在的位置移动，而是在预测完成横向转移时车辆会在哪里。**
+
+所有 Gameplay 实现都应该服务于这个核心。
+
+---
+
+# 50. 现在开始
+
+严格按照：
+
+```text
+环境检查
+↓
+安装位置检查
+↓
+最小 C++ 项目
+↓
+Native Build
+↓
+Emscripten Build
+↓
+Browser Preview
+↓
+三轨 Movement Sandbox
+↓
+Vehicle Streams
+↓
+Catch Detection
+↓
+Miss & Recovery
+↓
+Time Attack
+↓
+Rank
+↓
+Web Deployment
+```
+
+不要跳步骤。
+
+现在先从 **Environment Inspection** 开始。

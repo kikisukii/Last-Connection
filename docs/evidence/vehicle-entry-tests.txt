@@ -1,0 +1,1 @@
+PASS: all four body lengths enter from the bottom across 144/60/30/10 FPS and 500ms stalls; shared clock and velocities preserved

@@ -1,0 +1,9 @@
+A PASS: 12 -> 20 -> 32 -> 45 -> 60; entire-window gate
+B PASS: finite Express, exact service event, center return, no miss
+C PASS: Express -> TAXI at 2.84167s, visible lead 1.40833s
+D PASS: left pending cannot stop right
+E PASS: TTC 200/13 = 15.3846; no player velocity input
+F PASS: high-speed miss -> TAXI recovery
+Full-cycle stress: 16 completed runs, 64 Express catches, 64 service ends; constant speeds/no overlap
+Boarding counts Bike/Bus/Taxi/Express: 17/29/79/64
+PASS: 361450 traffic/service checks

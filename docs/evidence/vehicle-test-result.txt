@@ -1,0 +1,2 @@
+PASS: 69 deterministic vehicle checks
+PASS: 34 deterministic movement checks

@@ -1,0 +1,55 @@
+# Build output, toolchain downloads and caches
+build/
+build-*/
+out/
+cmake-build-*/
+/.downloads/
+/.cache/
+/.local/
+/.emscripten_cache/
+/.emscripten_ports/
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+
+# Compiled and temporary files (release artifacts are handled separately)
+*.obj
+*.o
+*.a
+*.lib
+*.exe
+*.dll
+*.pdb
+*.ilk
+*.tmp
+*.log
+*.wasm
+
+# IDE and operating-system state
+.vs/
+.vscode/
+.idea/
+CMakeUserPresets.json
+*.user
+*.suo
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Credentials and machine-local overrides
+.env
+.env.*
+*.secret
+*.pem
+*.key
+*.pfx
+*.p12
+*.local.ps1
+*.local.json
+/.codex/
+/.aws/
+/docs/evidence/*-protected-files.json

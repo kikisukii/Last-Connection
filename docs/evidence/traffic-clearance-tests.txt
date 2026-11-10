@@ -1,0 +1,3 @@
+Vehicle #7 entry delay: 0.172931 s
+PASS: 242 deterministic vehicle checks
+PASS: 34 deterministic movement checks

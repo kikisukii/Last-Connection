@@ -1,0 +1,19 @@
+Test project <project>/build/native-Debug
+    Start 1: movement_contract
+1/7 Test #1: movement_contract ................   Passed    0.02 sec
+    Start 2: vehicle_sequence_contract
+2/7 Test #2: vehicle_sequence_contract ........   Passed    0.02 sec
+    Start 3: random_traffic_contract
+3/7 Test #3: random_traffic_contract ..........   Passed    0.03 sec
+    Start 4: vehicle_entry_contract
+4/7 Test #4: vehicle_entry_contract ...........   Passed    0.02 sec
+    Start 5: catch_contract
+5/7 Test #5: catch_contract ...................   Passed    0.02 sec
+    Start 6: live_traffic_contract
+6/7 Test #6: live_traffic_contract ............   Passed    2.51 sec
+    Start 7: recovery_contract
+7/7 Test #7: recovery_contract ................   Passed    0.06 sec
+
+100% tests passed out of 7
+
+Total Test time (real) =   2.68 sec

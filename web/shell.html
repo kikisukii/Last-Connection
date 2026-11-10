@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>LAST CONNECTION — Prototype</title>
+  <style>
+    body { margin: 0; background: #121821; color: #e9edf2; font: 16px system-ui; text-align: center; }
+    main { margin: 20px auto; max-width: 1360px; }
+    canvas { display: block; width: 100%; background: #121821; outline: none; }
+    p { color: #b8c2ce; }
+  </style>
+</head>
+<body>
+  <main>
+    <canvas id="canvas" width="1360" height="690" tabindex="0" oncontextmenu="event.preventDefault()"></canvas>
+    <p id="status">Loading C++ / WebAssembly prototype…</p>
+  </main>
+  <script>
+    const canvas = document.getElementById('canvas');
+    const status = document.getElementById('status');
+    var Module = {
+      canvas,
+      print: (...args) => console.log(...args),
+      printErr: (...args) => console.error(...args),
+      onRuntimeInitialized: () => { status.textContent = 'Prototype running. Click the canvas to focus.'; canvas.focus(); },
+      onAbort: (reason) => { status.textContent = 'Could not start: ' + reason; }
+    };
+    canvas.addEventListener('click', () => canvas.focus());
+    canvas.addEventListener('keydown', event => {
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') event.preventDefault();
+    });
+  </script>
+  {{{ SCRIPT }}}
+</body>
+</html>

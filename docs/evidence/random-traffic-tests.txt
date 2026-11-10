@@ -1,0 +1,2 @@
+Distribution over 33111 draws: 8285 8252 8267 8307; left=16503
+PASS: random replay, probability, continuous clearance across 64 dense seeds, pruning, and configuration contracts

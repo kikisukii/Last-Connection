@@ -1,0 +1,134 @@
+Start testing: Nov 09 22:45 中国标准时间
+----------------------------------------------------------
+1/8 Testing: movement_contract
+1/8 Test: movement_contract
+Command: "<project>/build/native-Debug/movement_tests.exe"
+Directory: <project>/build/native-Debug
+"movement_contract" start time: Nov 09 22:45 中国标准时间
+Output:
+----------------------------------------------------------
+PASS: 34 deterministic movement checks
+<end of output>
+Test time =   0.35 sec
+----------------------------------------------------------
+Test Passed.
+"movement_contract" end time: Nov 09 22:45 中国标准时间
+"movement_contract" time elapsed: 00:00:00
+----------------------------------------------------------
+
+2/8 Testing: vehicle_sequence_contract
+2/8 Test: vehicle_sequence_contract
+Command: "<project>/build/native-Debug/vehicle_tests.exe"
+Directory: <project>/build/native-Debug
+"vehicle_sequence_contract" start time: Nov 09 22:45 中国标准时间
+Output:
+----------------------------------------------------------
+Vehicle #7 entry delay: 0.172931 s
+PASS: 242 deterministic vehicle checks
+<end of output>
+Test time =   0.35 sec
+----------------------------------------------------------
+Test Passed.
+"vehicle_sequence_contract" end time: Nov 09 22:45 中国标准时间
+"vehicle_sequence_contract" time elapsed: 00:00:00
+----------------------------------------------------------
+
+3/8 Testing: random_traffic_contract
+3/8 Test: random_traffic_contract
+Command: "<project>/build/native-Debug/random_traffic_tests.exe"
+Directory: <project>/build/native-Debug
+"random_traffic_contract" start time: Nov 09 22:45 中国标准时间
+Output:
+----------------------------------------------------------
+Distribution over 33111 draws: 8285 8252 8267 8307; left=16503
+PASS: random replay, probability, continuous clearance across 64 dense seeds, pruning, and configuration contracts
+<end of output>
+Test time =   0.35 sec
+----------------------------------------------------------
+Test Passed.
+"random_traffic_contract" end time: Nov 09 22:45 中国标准时间
+"random_traffic_contract" time elapsed: 00:00:00
+----------------------------------------------------------
+
+4/8 Testing: vehicle_entry_contract
+4/8 Test: vehicle_entry_contract
+Command: "<project>/build/native-Debug/vehicle_entry_tests.exe"
+Directory: <project>/build/native-Debug
+"vehicle_entry_contract" start time: Nov 09 22:45 中国标准时间
+Output:
+----------------------------------------------------------
+PASS: all four body lengths enter from the bottom across 144/60/30/10 FPS and 500ms stalls; shared clock and velocities preserved
+<end of output>
+Test time =   0.30 sec
+----------------------------------------------------------
+Test Passed.
+"vehicle_entry_contract" end time: Nov 09 22:45 中国标准时间
+"vehicle_entry_contract" time elapsed: 00:00:00
+----------------------------------------------------------
+
+5/8 Testing: catch_contract
+5/8 Test: catch_contract
+Command: "<project>/build/native-Debug/catch_tests.exe"
+Directory: <project>/build/native-Debug
+"catch_contract" start time: Nov 09 22:45 中国标准时间
+Output:
+----------------------------------------------------------
+PASS: 36 continuous catch, early-follow, riding, departure and boundary checks
+<end of output>
+Test time =   0.35 sec
+----------------------------------------------------------
+Test Passed.
+"catch_contract" end time: Nov 09 22:45 中国标准时间
+"catch_contract" time elapsed: 00:00:00
+----------------------------------------------------------
+
+6/8 Testing: live_traffic_contract
+6/8 Test: live_traffic_contract
+Command: "<project>/build/native-Debug/live_traffic_tests.exe"
+Directory: <project>/build/native-Debug
+"live_traffic_contract" start time: Nov 09 22:45 中国标准时间
+Output:
+----------------------------------------------------------
+PASS: 32 seeded camera-speed stress runs, equal type draws, both-edge entry, constant trajectories and sustained riding
+<end of output>
+Test time =   3.55 sec
+----------------------------------------------------------
+Test Passed.
+"live_traffic_contract" end time: Nov 09 22:45 中国标准时间
+"live_traffic_contract" time elapsed: 00:00:03
+----------------------------------------------------------
+
+7/8 Testing: recovery_contract
+7/8 Test: recovery_contract
+Command: "<project>/build/native-Debug/recovery_tests.exe"
+Directory: <project>/build/native-Debug
+"recovery_contract" start time: Nov 09 22:45 中国标准时间
+Output:
+----------------------------------------------------------
+Integrated traffic: 680 catches, 440 misses across 8 seeds
+PASS: 287289 recovery, miss timing, equilibrium, curved catch and momentum-chain checks
+<end of output>
+Test time =   0.12 sec
+----------------------------------------------------------
+Test Passed.
+"recovery_contract" end time: Nov 09 22:46 中国标准时间
+"recovery_contract" time elapsed: 00:00:00
+----------------------------------------------------------
+
+8/8 Testing: time_attack_contract
+8/8 Test: time_attack_contract
+Command: "<project>/build/native-Debug/time_attack_tests.exe"
+Directory: <project>/build/native-Debug
+"time_attack_contract" start time: Nov 09 22:46 中国标准时间
+Output:
+----------------------------------------------------------
+PASS: 56 race clock, exact finish, ranks, late arrival, restart and best-record checks
+<end of output>
+Test time =   0.09 sec
+----------------------------------------------------------
+Test Passed.
+"time_attack_contract" end time: Nov 09 22:46 中国标准时间
+"time_attack_contract" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Nov 09 22:46 中国标准时间

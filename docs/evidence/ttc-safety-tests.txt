@@ -1,0 +1,7 @@
+PASS: short/long unsafe TTC rejected; 0.5s TTC with 0.1s exit allowed; candidate direction and lanes
+PASS: faster rear keeps clearance until leader retires, across three integration partitions
+PASS: actual Run -> Bike -> Bus acceleration leaves pair TTC unchanged at the catch instant
+PASS: blocked left does not change right; pending left admitted after leader viewport exit
+PASS: injected future collision and overlap emit full diagnostics without changing speeds
+PASS: 9822 TTC safety checks
+TRAFFIC SAFETY VIOLATION | simulationTime=0 | reason=ACTUAL OVERLAP | lane=-1 | Leader ID=7 | Leader speed=32 | Leader position=100 | Leader length=10 | Leader Spawn time=0 | Leader Spawn position=100 | Follower ID=8 | Follower speed=45 | Follower position=96 | Follower length=5 | Follower Spawn time=0 | Follower Spawn position=96 | Gap=-3.5 | TTC=0 | Front exit time=35.151442307692307 | Clearance time=-0.34615384615384615

@@ -1,0 +1,26 @@
+{
+  "src/gameplay/traffic_safety.cpp": {
+    "unchanged": true,
+    "sha256": "7db275a9467712bfead86ce070b13f76e78b93ba8dbb4c3aaa3c9864cffdc72f"
+  },
+  "include/traffic_safety.hpp": {
+    "unchanged": true,
+    "sha256": "977f1bc19e1a24816f294d6be648a0ac7b4a62010c15ce667519910a7945debc"
+  },
+  "src/gameplay/live_traffic.cpp": {
+    "unchanged": true,
+    "sha256": "92edb3191daab971f12465e2f1e5e571972c738bc15d0b7ddb8fb88f6590f75c"
+  },
+  "include/live_traffic.hpp": {
+    "unchanged": true,
+    "sha256": "77b9fe326e0c8f23532cdaa94cb457de6fe7267aa941b28de54eb9d373eec366"
+  },
+  "src/gameplay/forward_motion.cpp": {
+    "unchanged": true,
+    "sha256": "59e863b19e5a3b097d01c5cff003b872ff763f75c8f63fd884d2d372e099b24b"
+  },
+  "src/gameplay/movement.cpp": {
+    "unchanged": true,
+    "sha256": "eb7c4dcc5071f11d5a41b1c33cbf9c79005669cd9508330ddf091a93baed4f0e"
+  }
+}

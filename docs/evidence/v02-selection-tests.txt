@@ -1,0 +1,4 @@
+PASS: 9/19/20/22, no direct Run skips, independent speed/position diagnostics, retained snapshot, Bus margin
+PASS: actual Bike immediate + Bus prepared, seeded replay, no Prepared bypass
+PASS: pending reservation, lifecycle release, admission-only counts, retry reset
+PASS: 6299 V0.2 selection/debug checks

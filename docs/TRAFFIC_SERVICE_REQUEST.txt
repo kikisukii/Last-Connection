@@ -1,0 +1,506 @@
+请基于当前 LAST CONNECTION 原型进行一次“交通系统与Express状态”的定向修改。
+
+不要重写整个项目。
+
+不要修改 Rank、Deadline、Miss Penalty、0.25 秒横移等已经确定的核心规则。
+
+本次只解决三个问题：
+
+1. Express 一旦接上就成为 dominant state。
+2. 高速状态下前方没有新的可玩 traffic encounter。
+3. 某一条 lane 的车辆阻塞会导致整个 traffic spawning 停止。
+
+---
+
+# 一、Express / Vehicle Boarding
+
+当前所有车辆共享：
+
+MAX_RELATIVE_SPEED = 30
+
+请改为：
+
+每种车辆拥有独立的：
+
+maxBoardingRelativeSpeed
+
+第一轮 Prototype 可以先使用：
+
+Bike = 8
+Bus = 12
+Taxi = 15
+Express = 16
+
+这些不是最终参数，只是为了验证“速度阶梯”。
+
+当前速度：
+
+Run = 12
+Bike = 20
+Bus = 32
+Taxi = 45
+Express = 60
+
+希望自然形成：
+
+Run -> Bike
+Bike -> Bus
+Bus -> Taxi
+Taxi -> Express
+
+而不是：
+
+Run -> Express
+
+可以直接接。
+
+所有这些参数必须继续集中在 gameplay_config.hpp。
+
+---
+
+# 二、Express Catch Zone
+
+当前 Express：
+
+visual length = 15
+catch zone = 11
+
+请把 Express 的 Catch Zone 缩小。
+
+第一轮可以先尝试：
+
+catch zone = 6~8
+
+不要修改 Express 的视觉车身大小。
+
+视觉尺寸与 Gameplay Catch Zone 必须完全分离。
+
+---
+
+# 三、所有车辆增加 Ride Service Distance
+
+当前：
+
+车辆可以无限骑乘。
+
+这会导致玩家一旦进入最快车辆就没有继续 transfer 的理由。
+
+请增加：
+
+rideServiceDistance
+
+要求：
+
+- 所有车辆都具有这个属性。
+- Express 可以比普通车辆更短。
+- 该距离从“玩家成功接上车辆”的时刻开始计算。
+- 不要从车辆生成时开始计算。
+- 骑乘期间速度保持车辆速度，不做自然衰减。
+- 达到 rideServiceDistance 后，车辆服务结束。
+- 玩家回到 CENTER running lane。
+- 玩家保留当前 forward speed。
+- 然后继续原有的 speed decay / recovery。
+- Service End 不算 Miss。
+- Service End 不扣 Miss Penalty。
+- Service End 不重开。
+
+如果玩家在 service end 时正在进行横移，请确保不会产生重复状态或重复扣速。
+
+第一版可以先用 Debug Overlay 显示：
+
+Remaining Ride Distance
+
+不要先做复杂美术提示。
+
+---
+
+# 四、Traffic Spawning 改为 Per-Lane Scheduler
+
+删除当前：
+
+Global timer
+-> random lane
+-> 如果 lane occupied 就丢掉 request
+
+这种逻辑。
+
+改成：
+
+TrafficManager
+├── LeftLaneScheduler
+└── RightLaneScheduler
+
+每条 transport lane 独立维护：
+
+- nextSpawnTime
+- pendingVehicle
+- activeVehicles
+- safety check
+
+如果 LEFT 当前不能生成：
+
+只阻塞 LEFT。
+
+RIGHT 仍然可以继续生成。
+
+绝对不能让 LEFT 的状态阻塞 RIGHT。
+
+---
+
+# 五、不要因为“后车更快”就永久禁止生成
+
+当前规则：
+
+“如果新车在另一辆车后面，而且速度更快，则永远不能生成。”
+
+请删除这种绝对规则。
+
+改成基于预测的同车道追尾检查。
+
+对于同一 lane：
+
+如果：
+
+rearSpeed <= frontSpeed
+
+则没有追赶问题。
+
+如果：
+
+rearSpeed > frontSpeed
+
+计算：
+
+TTC = longitudinalGap / (rearSpeed - frontSpeed)
+
+然后判断：
+
+如果 TTC 足够大，且 front vehicle 会在 TTC 到来之前离开当前有效模拟区域：
+
+允许生成。
+
+只有当 rear vehicle 会在两个车辆仍然同时存在于有效区域时追上 front vehicle：
+
+阻止或延迟生成。
+
+车辆之间仍然不能发生实际重叠。
+
+这里的 TTC 只是一个简单的 constant-velocity prediction。
+
+不要引入复杂交通 AI。
+
+---
+
+# 六、Traffic Encounter 不应该完全随机
+
+当前随机：
+
+2~4秒
+50% LEFT / 50% RIGHT
+25% each vehicle type
+
+容易产生：
+
+- 没有可接车辆
+- 高速状态后空场
+- 随机生成无法接上的车辆
+- 玩家无法理解为什么突然没有机会
+
+请增加一个非常轻量的 Encounter Planner。
+
+它不需要复杂 AI。
+
+目标只有：
+
+> 在玩家未来大约 1.5~2.5 秒的时间窗口内，确保存在至少一个合理的 transfer opportunity。
+
+这个时间范围只是第一轮 Prototype 参数。
+
+例如：
+
+TARGET_ENCOUNTER_TIME_MIN
+TARGET_ENCOUNTER_TIME_MAX
+
+---
+
+# 七、使用 Relative Velocity 安排 Encounter
+
+如果目标车辆比玩家慢：
+
+targetVehicleSpeed < playerSpeed
+
+目标车辆应该生成在玩家前方。
+
+大致按照：
+
+distanceAhead
+≈
+(playerSpeed - targetSpeed) * desiredEncounterTime
++
+catchBuffer
+
+安排。
+
+如果目标车辆比玩家快：
+
+targetVehicleSpeed > playerSpeed
+
+目标车辆应该生成在玩家后方。
+
+大致：
+
+distanceBehind
+≈
+(targetSpeed - playerSpeed) * desiredEncounterTime
++
+catchBuffer
+
+安排。
+
+目标不是精确数学模拟，而是让下一次 encounter 在合理的可观察、可预测时间内发生。
+
+不要让车辆突然在玩家旁边凭空出现。
+
+---
+
+# 八、特别处理 Express
+
+如果玩家当前正在 Express：
+
+不要因为玩家速度达到60就停止生成 traffic。
+
+Traffic Manager 应该提前检查：
+
+remainingRideDistance
+
+如果 Express 即将结束：
+
+应该确保下一阶段存在至少一个合理的 traffic opportunity。
+
+例如：
+
+Express service remaining 很短：
+
+-> 安排一个 Taxi / Bus / 其他合理车辆在接下来可恢复的时间窗口内出现。
+
+注意：
+
+不要保证每次都是更快的车。
+
+因为 Express 本身已经是最高速。
+
+这时候下一辆车可能是稍慢的车，它的意义是：
+
+> Express结束后的下一段 connection / recovery opportunity。
+
+---
+
+# 九、Camera / Visibility
+
+如果玩家高速时车辆已经生成，但仍然因为生成距离太远而完全看不到：
+
+先不要增加随机车辆数量。
+
+优先检查：
+
+- camera visible forward distance
+- encounter spawn distance
+- player speed
+- target encounter time
+
+确保玩家能够在目标车辆进入 transfer window 之前看到它。
+
+如果确实需要，再考虑轻微的 high-speed camera zoom-out。
+
+但暂时不要增加复杂 camera system。
+
+---
+
+# 十、Target Selection 先保持原规则
+
+当前：
+
+转移开始时：
+
+- 检查目标车道中已经加入车流的车辆
+- 找未来0.25秒内最早满足接车条件的车辆
+- 多个同时满足时选ID较小
+- waiting vehicle不参与
+- transfer中途新生成车辆不加入本次候选
+
+这些先保持。
+
+本次只修改：
+
+“有哪些车辆会合理地进入车流”。
+
+不要同时修改 Target Selection。
+
+---
+
+# 十一、Miss / Recovery 不修改
+
+保持当前：
+
+Miss penalty = 5
+
+并且：
+
+speed > 12:
+    向12减速
+
+speed < 12:
+    向12恢复
+
+不要修改。
+
+---
+
+# 十二、Debug Overlay 增强
+
+增加：
+
+Current Vehicle
+Current Vehicle Speed
+Remaining Ride Distance
+
+每条 lane：
+
+Active Vehicle Count
+Pending Vehicle
+Next Spawn Time
+Spawn Blocked
+Block Reason
+
+例如：
+
+LEFT:
+Pending: Taxi
+Spawn: BLOCKED
+Reason: TTC too small
+
+RIGHT:
+Pending: Bus
+Spawn: READY
+
+---
+
+# 十三、Deterministic Test Scenarios
+
+增加以下测试：
+
+## Test A — Speed Ladder
+
+Run 12
+-> Bike 20
+-> Bus 32
+-> Taxi 45
+-> Express 60
+
+确认：
+
+Run -> Express 不应该直接成功。
+
+---
+
+## Test B — Express Dominance
+
+成功进入 Express。
+
+确认：
+
+- Express 不是永久骑乘。
+- Ride Service Distance 会减少。
+- Service End 后回 CENTER。
+- 不扣 Miss。
+- 保留当前速度。
+
+---
+
+## Test C — Express Continuation
+
+Express 快结束时：
+
+确认前方仍然存在至少一个合理的下一次 traffic encounter。
+
+不要出现：
+
+“Express结束 -> 长时间空场”。
+
+---
+
+## Test D — Lane Independence
+
+LEFT 有 pending vehicle。
+
+RIGHT 仍然可以生成。
+
+---
+
+## Test E — Same Lane TTC
+
+前车慢、后车快：
+
+如果 TTC 太小：
+
+阻止后车生成。
+
+如果 TTC 足够大、前车会先离开模拟区域：
+
+允许后车生成。
+
+---
+
+## Test F — Recovery
+
+Player miss。
+
+速度下降。
+
+在低于正常速度之前：
+
+出现一辆可合理接上的车。
+
+确认可以 recovery。
+
+---
+
+# 十四、重要
+
+不要：
+
+- 修改 Rank
+- 修改 Deadline
+- 修改 Finish Distance
+- 修改 Miss Penalty
+- 修改 0.25 秒横移
+- 增加路线分支
+- 增加新输入
+- 增加随机复杂 AI
+- 增加美术
+- 增加音效
+- 重写整个 Gameplay Architecture
+
+本次目标只是：
+
+> **让“上车 → 骑一段 → 服务结束 → 回到跑步 → 下一次接车”形成稳定、连续、可玩的循环。**
+
+完成后报告：
+
+【修改文件】
+
+【Vehicle Boarding 修改】
+
+【Ride Service 修改】
+
+【Traffic Scheduler 修改】
+
+【TTC 修改】
+
+【Encounter Planner 修改】
+
+【测试结果】
+
+【仍存在的问题】
+
+【需要我亲自 Playtest 的参数】

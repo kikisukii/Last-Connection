@@ -1,0 +1,15 @@
+A PASS: 0.40s / 48 steps, adjacent only, input discarded
+B PASS: immediate consumption, current service continues, no reboarding
+C PASS: failed Bus remains unused and eligible for future attempts
+D PASS: Express service ends without penalty, used ID stays excluded
+E/F PASS: 15/s decay with clamp; miss 12->7 and 5/s recovery
+G PASS: all adjacent upgrades feasible; all six direct skips rejected
+Bus contact=0s player=14 diff=18 limit=19 result=SUCCESS
+Bus contact=0.04s player=13.4 diff=18.6 limit=19 result=SUCCESS
+Bus contact=0.0666667s player=13 diff=19 limit=19 result=SUCCESS
+Bus contact=0.08s player=12.8 diff=19.2 limit=19 result=MISS
+Bus contact=0.12s player=12.2 diff=19.8 limit=19 result=MISS
+Bus contact=0.17s player=12 diff=20 limit=19 result=MISS
+Bus contact=0.4s player=12 diff=20 limit=19 result=MISS
+Intersection PASS: early success / late rejection / inclusive boundary / actual snapshot / dt partition / configurable gate
+PASS: 240 V0.3 checks
