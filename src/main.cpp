@@ -9,6 +9,7 @@
 #include <cmath>
 #include <cstring>
 #include <chrono>
+#include <vector>
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
 #endif
@@ -32,6 +33,33 @@ bool resultRecorded = false;
 bool newBest = false;
 lc::ui::Flow ui;
 int pendingMenuAction = 0;
+int pendingLanguage = -1;
+Font scFont{}, jpFont{};
+constexpr Rectangle languageButtons[]{{250,320,260,60},{550,320,260,60},{850,320,260,60}};
+const char* text(const char* key) { return lc::ui::getText(ui.language,key); }
+Font uiFont() { return ui.language==lc::ui::Language::Japanese ? jpFont : scFont; }
+void uiDraw(const char* value, int x, int y, int size, Color color) {
+    DrawTextEx(uiFont(),value,Vector2{static_cast<float>(x),static_cast<float>(y)},static_cast<float>(size),1,color);
+}
+int uiMeasure(const char* value, int size) {
+    return static_cast<int>(std::ceil(MeasureTextEx(uiFont(),value,static_cast<float>(size),1).x));
+}
+void loadUiFonts() {
+    std::string all;
+    for(const auto& entry : lc::ui::translations) for(const char* value : entry.values) all+=value;
+    for(int c=32;c<127;++c) all+=static_cast<char>(c);
+    all+="←→";
+    int count=0; int* points=LoadCodepoints(all.c_str(),&count);
+    std::vector<int> unique(points,points+count); UnloadCodepoints(points);
+    std::sort(unique.begin(),unique.end()); unique.erase(std::unique(unique.begin(),unique.end()),unique.end());
+    scFont=LoadFontEx("assets/fonts/LC-UI-SC.otf",40,unique.data(),static_cast<int>(unique.size()));
+    jpFont=LoadFontEx("assets/fonts/LC-UI-JP.otf",40,unique.data(),static_cast<int>(unique.size()));
+    SetTextureFilter(scFont.texture,TEXTURE_FILTER_BILINEAR);
+    SetTextureFilter(jpFont.texture,TEXTURE_FILTER_BILINEAR);
+}
+const char* publicVehicleName(lc::VehicleType type) {
+    return text(std::array{"bike","bus","taxi","express"}[static_cast<unsigned>(type)]);
+}
 [[maybe_unused]] constexpr Rectangle actionButton{350, 393, 260, 48};
 constexpr Rectangle startButton{550, 620, 260, 48};
 [[maybe_unused]] constexpr Rectangle helpButton{350, 453, 260, 40};
@@ -74,31 +102,36 @@ void drawVehicles(std::span<const lc::Vehicle> vehicles) {
         DrawRectangleRec(zone, Fade(riding ? accent : color, 0.48f));
         DrawRectangleLinesEx(zone, 1, riding ? accent : RAYWHITE);
         DrawLineEx(Vector2{x - 45, body.y + 3}, Vector2{x + 45, body.y + 3}, 3.0f, color);
-        DrawText(game.serviceConsumed(vehicle.id) ? "USED" : lc::vehicleName(vehicle.type), static_cast<int>(x - 40), static_cast<int>(y - 15), 16, color);
-        DrawText(TextFormat("%.0f u/s", vehicle.speed), static_cast<int>(x - 35), static_cast<int>(y + 3), 14, RAYWHITE);
+        uiDraw(game.serviceConsumed(vehicle.id) ? text("used") : publicVehicleName(vehicle.type), static_cast<int>(x - 40), static_cast<int>(y - 15), 16, color);
+        uiDraw(TextFormat(text("speed"), vehicle.speed), static_cast<int>(x - 35), static_cast<int>(y + 3), 14, RAYWHITE);
     }
     EndScissorMode();
 }
 
-const char* text(const char* key) {
-    for (const auto& item : lc::ui::copy) if (std::strcmp(key,item.key)==0) return item.text;
-    return "";
-}
 void centered(const char* value, int x, int y, int size, Color color) {
-    DrawText(value,x-MeasureText(value,size)/2,y,size,color);
+    uiDraw(value,x-uiMeasure(value,size)/2,y,size,color);
 }
 int wrapped(const char* value, int x, int y, int width, int size, Color color) {
-    std::string line, word;
-    const std::string input(value);
-    auto addWord = [&] {
-        if (!line.empty() && MeasureText((line+" "+word).c_str(),size)>width) {
-            DrawText(line.c_str(),x,y,size,color); y+=size+8; line.clear();
+    // UTF-8 tokens: Latin words stay together; CJK breaks only between codepoints.
+    std::vector<std::string> tokens;
+    std::string word;
+    for(const char* cursor=value; *cursor;) {
+        int bytes=0; const int cp=GetCodepointNext(cursor,&bytes);
+        if(cp>=128 || cp==' ') {
+            if(!word.empty()) { tokens.push_back(word); word.clear(); }
+            tokens.emplace_back(cursor,bytes);
+        } else word.append(cursor,bytes);
+        cursor+=bytes;
+    }
+    if(!word.empty()) tokens.push_back(word);
+    std::string line;
+    for(const auto& token : tokens) {
+        if(!line.empty() && uiMeasure((line+token).c_str(),size)>width) {
+            uiDraw(line.c_str(),x,y,size,color); y+=size+8; line.clear();
         }
-        if (!line.empty()) line+=' ';
-        line+=word; word.clear();
-    };
-    for (char c : input) { if(c==' ') addWord(); else word+=c; }
-    addWord(); DrawText(line.c_str(),x,y,size,color);
+        if(!line.empty() || token!=" ") line+=token;
+    }
+    uiDraw(line.c_str(),x,y,size,color);
     return y+size+8;
 }
 void button(Rectangle box, const char* label, bool primary=true) {
@@ -107,47 +140,57 @@ void button(Rectangle box, const char* label, bool primary=true) {
     if(!primary) DrawRectangleLinesEx(box,1,accent);
     centered(label,static_cast<int>(box.x+box.width/2),static_cast<int>(box.y+box.height/2-10),20,primary?background:accent);
 }
+[[maybe_unused]] void drawLanguageSelection() {
+    centered(text("title"),680,175,42,RAYWHITE);
+    centered(text("select"),680,245,24,accent);
+    for(int i=0;i<3;++i) button(languageButtons[i],text(std::array{"zh","en","ja"}[i]));
+}
 [[maybe_unused]] void drawOnboarding() {
-    centered(text("title"),680,26,42,RAYWHITE);
+    centered(text("title"),680,24,42,RAYWHITE);
     centered(text("subtitle"),680,78,18,LIGHTGRAY);
-    centered(text("how"),680,112,22,accent);
-    centered(text("goal"),680,145,20,RAYWHITE);
-    for(int x : {40,480,920}) DrawRectangle(x,188,400,302,Color{29,39,51,255});
-    // Vector key arrows avoid missing Unicode glyphs in raylib's default font.
-    for(int x : {66,130}) {
-        DrawRectangleLines(x,210,48,34,accent);
-        centered(x==66?"<":">",x+24,215,24,accent);
-    }
-    wrapped(text("controls"),66,258,350,20,RAYWHITE);
-    DrawText(text("center"),66,322,20,accent);
-    DrawText(text("run"),66,350,20,RAYWHITE);
-    DrawText(text("sides"),66,396,20,accent);
-    wrapped(text("vehicles"),66,424,350,20,RAYWHITE);
-    DrawText(text("predict"),502,212,22,accent);
-    int y=wrapped(text("early"),502,252,354,20,RAYWHITE);
-    wrapped(text("aim"),502,y+6,354,20,RAYWHITE);
-    DrawText(text("boarding"),502,382,20,accent);
-    wrapped(text("automatic"),502,415,354,20,RAYWHITE);
-    DrawText(text("miss"),942,212,22,accent);
-    wrapped(text("recover"),942,252,354,20,RAYWHITE);
-    DrawText(text("temporary"),942,350,20,accent);
-    y=wrapped(text("once"),942,386,354,20,RAYWHITE);
-    wrapped(text("next"),942,y+6,354,20,RAYWHITE);
-    centered(text("deadline"),680,510,21,RAYWHITE);
-    centered(text("rank"),680,540,18,LIGHTGRAY);
-    centered(text("ranks"),680,566,23,accent);
-    centered(text("rankHint"),680,594,16,LIGHTGRAY);
-    button(startButton,ui.screen==lc::ui::Screen::Help?"PLAY AGAIN":"START");
-    if(ui.screen==lc::ui::Screen::Help) button(backButton,"BACK",false);
-    DrawText("LEFT / RIGHT also starts",36,644,16,LIGHTGRAY);
+    centered(text("how"),680,109,22,accent);
+    centered(TextFormat("%s / %s",text("goalLabel"),text("goal")),680,145,20,RAYWHITE);
+    for(int x : {40,480,920}) DrawRectangle(x,188,400,312,Color{29,39,51,255});
+    uiDraw("← / →",66,207,27,accent);
+    int y=wrapped(TextFormat("%s / %s",text("controlsLabel"),text("controls")),66,248,350,20,RAYWHITE);
+    y=wrapped(text("center"),66,y+20,350,20,accent);
+    y=wrapped(text("run"),66,y,350,20,RAYWHITE);
+    y=wrapped(text("sides"),66,y+16,350,20,accent);
+    wrapped(text("vehicles"),66,y,350,20,RAYWHITE);
+    y=wrapped(text("predict"),502,208,354,21,accent);
+    y=wrapped(text("early"),502,y+6,354,19,RAYWHITE);
+    y=wrapped(text("aim"),502,y+5,354,19,RAYWHITE);
+    y=wrapped(text("boarding"),502,y+16,354,21,accent);
+    wrapped(text("automatic"),502,y+5,354,19,RAYWHITE);
+    y=wrapped(text("miss"),942,208,354,21,accent);
+    y=wrapped(text("recover"),942,y+6,354,19,RAYWHITE);
+    y=wrapped(text("temporary"),942,y+16,354,20,accent);
+    y=wrapped(text("once"),942,y+5,354,19,RAYWHITE);
+    wrapped(text("next"),942,y+5,354,19,RAYWHITE);
+    centered(text("deadline"),680,512,21,RAYWHITE);
+    centered(text("rank"),680,542,18,LIGHTGRAY);
+    centered(text("ranks"),680,568,23,accent);
+    centered(text("rankHint"),680,596,16,LIGHTGRAY);
+    button(startButton,text(ui.screen==lc::ui::Screen::Help?"again":"start"));
+    if(ui.screen==lc::ui::Screen::Help) button(backButton,text("back"),false);
+    uiDraw(text(ui.screen==lc::ui::Screen::Help?"againHint":"startHint"),36,644,16,LIGHTGRAY);
 }
 #ifdef __EMSCRIPTEN__
 EM_JS(void, webCopy, (const char* key, const char* value), {
+    window.lcMenu.copy[UTF8ToString(key)]=UTF8ToString(value);
     document.querySelectorAll('[data-copy="'+UTF8ToString(key)+'"]').forEach(e=>e.textContent=UTF8ToString(value));
 });
 EM_JS(void, webMenu, (int screen, const char* time, int rank, const char* best, int fresh), {
     window.lcMenu.show(screen,UTF8ToString(time),String.fromCharCode(rank),UTF8ToString(best),!!fresh);
 });
+EM_JS(void, webLanguage, (const char* tag), {
+    document.documentElement.lang=UTF8ToString(tag);
+    canvas.setAttribute('aria-label',window.lcMenu.copy.gameLabel);
+});
+void updateWebLanguage() {
+    for(const auto& item : lc::ui::translations) webCopy(item.key,text(item.key));
+    webLanguage(lc::ui::languageTag(ui.language));
+}
 void syncWebMenu() {
     static int previous=-1;
     const int screen=static_cast<int>(ui.screen);
@@ -163,6 +206,12 @@ void drawSandbox() {
     const auto vehicles = traffic.current();
     BeginDrawing();
     ClearBackground(background);
+    if(ui.screen==lc::ui::Screen::Language) {
+#ifndef __EMSCRIPTEN__
+        drawLanguageSelection();
+#endif
+        EndDrawing(); return;
+    }
     if(ui.screen==lc::ui::Screen::Start || ui.screen==lc::ui::Screen::Help) {
 #ifndef __EMSCRIPTEN__
         drawOnboarding();
@@ -171,12 +220,12 @@ void drawSandbox() {
     }
     DrawText("LAST CONNECTION", 28, 20, 28, RAYWHITE);
     if(ui.debug) DrawText(TextFormat("V0.3 / MOVEMENT FEEL / SEED %u", static_cast<unsigned>(traffic.seed())), 28, 54, 16, LIGHTGRAY);
-    DrawText(TextFormat("TIME %s", lc::formatRaceTime(race.elapsed()).c_str()), 600, 18, 22, RAYWHITE);
-    DrawText(TextFormat("DEADLINE %s%s", lc::formatRaceTime(config.deadline).c_str(), race.late() ? " / LATE" : ""), 600, 49, 18, race.late() ? ORANGE : LIGHTGRAY);
+    uiDraw(TextFormat("%s %s", text("time"), lc::formatRaceTime(race.elapsed()).c_str()), 600, 18, 22, RAYWHITE);
+    uiDraw(TextFormat("%s %s", text("deadlineLabel"), lc::formatRaceTime(config.deadline).c_str()), 600, 49, 18, race.late() ? ORANGE : LIGHTGRAY);
     for (int lane = -1; lane <= 1; ++lane) {
         const float x = roadCenter + lane * lanePixels;
         DrawRectangle(static_cast<int>(x - 65), 112, 130, 358, Color{29, 39, 51, 255});
-        DrawText(lc::laneName(static_cast<lc::Lane>(lane)), static_cast<int>(x - 35), 86, 16, LIGHTGRAY);
+        uiDraw(text(std::array{"left","middle","right"}[lane+1]), static_cast<int>(x - 35), 86, 16, LIGHTGRAY);
         const double offset = std::fmod(player.forwardPosition() * forwardPixelsPerUnit, 60.0);
         for (float y = 115.0f + static_cast<float>(offset); y < 450.0f; y += 60.0f) {
             DrawLine(static_cast<int>(x - 54), static_cast<int>(y), static_cast<int>(x + 54),
@@ -187,7 +236,7 @@ void drawSandbox() {
     const float finishY = playerScreenY - static_cast<float>(race.remainingDistance()) * forwardPixelsPerUnit;
     if (finishY >= roadTop && finishY <= roadBottom) {
         DrawRectangle(120, static_cast<int>(finishY - 3), 440, 6, accent);
-        DrawText("AIRPORT / FINISH", 240, static_cast<int>(finishY - 24), 16, accent);
+        uiDraw(TextFormat("%s / %s",text("airport"),text("finish")), 240, static_cast<int>(finishY - 24), 16, accent);
     }
     const float x = roadCenter + static_cast<float>(player.lateralPosition() / player.config().laneSpacing) * lanePixels;
     DrawCircleV(Vector2{x, playerScreenY}, 14.0f, accent);
@@ -315,34 +364,32 @@ void drawSandbox() {
     }
     DrawText("Active, unconsumed / forecast checked",600,650,14,LIGHTGRAY);
     } else {
-        DrawText("Move early. Predict the intersection.",600,140,23,accent);
-        DrawText("Every ride is temporary.",600,185,20,RAYWHITE);
-        DrawText("Miss? Keep running and recover.",600,220,20,RAYWHITE);
+        uiDraw(text("moveHint"),600,140,23,accent);
+        uiDraw(text("rideHint"),600,185,20,RAYWHITE);
+        uiDraw(text("missHint"),600,220,20,RAYWHITE);
     }
-    DrawText("F1: DEBUG",1160,665,14,LIGHTGRAY);
+    uiDraw(text("debugHint"),1160,665,14,LIGHTGRAY);
     DrawRectangle(28, 488, 530, 7, Color{54,66,80,255});
     DrawRectangle(28, 488, static_cast<int>(530 * race.progress()), 7, accent);
-    DrawText(TextFormat("AIRPORT: %.1f units left / %.0f%%", race.remainingDistance(), race.progress() * 100), 28, 504, 17, RAYWHITE);
-    DrawText(TextFormat("BEST %s%s", bestTime ? lc::formatRaceTime(*bestTime).c_str() : "--:--.--", storageAvailable ? "" : " (session)"), 330, 635, 17, accent);
-    if (race.late() && !race.finished()) DrawText("MISSED FLIGHT - keep going for your finish time", 28, 75, 14, ORANGE);
+    uiDraw(TextFormat(text("progress"), race.remainingDistance(), race.progress() * 100), 28, 504, 17, RAYWHITE);
+    uiDraw(TextFormat("%s %s%s", text("best"), bestTime ? lc::formatRaceTime(*bestTime).c_str() : "--:--.--", storageAvailable ? "" : text("sessionSuffix")), 330, 635, 17, accent);
+    if (race.late() && !race.finished()) uiDraw(text("lateHint"), 28, 75, 14, ORANGE);
 
     if (ui.screen==lc::ui::Screen::Results) {
         DrawRectangle(0, 0, 1360, 690, background);
 #ifndef __EMSCRIPTEN__
 
-            const Color resultColor = race.rank() == 'F' ? ORANGE : accent;
-            const char* headline = race.rank() == 'F' ? "MISSED FLIGHT" : "AIRPORT REACHED";
-            DrawText(headline, 480 - MeasureText(headline, 32) / 2, 78, 32, resultColor);
-            DrawText(TextFormat("RANK %c", race.rank()), 400, 140, 44, resultColor);
-            DrawText("FINISH TIME", 390, 210, 22, LIGHTGRAY);
-            const auto time = lc::formatRaceTime(*race.finishTime());
-            DrawText(time.c_str(), 480 - MeasureText(time.c_str(), 40) / 2, 243, 40, RAYWHITE);
-            DrawText(TextFormat("BEST TIME  %s", lc::formatRaceTime(*bestTime).c_str()), 340, 303, 22, accent);
-            DrawText(newBest ? "NEW PERSONAL BEST" : "Try another connection.", 350, 342, 18, LIGHTGRAY);
-        button(actionButton,"PLAY AGAIN");
-        button(helpButton,"HOW TO PLAY",false);
-        DrawText("Click PLAY AGAIN or press LEFT / RIGHT",285,519,18,LIGHTGRAY);
-        DrawText(storageAvailable?"Best saved on this device":"Best kept for this session",304,554,15,LIGHTGRAY);
+        const Color resultColor=race.rank()=='F'?ORANGE:accent;
+        centered(text(race.rank()=='F'?"missed":"reached"),480,78,32,resultColor);
+        centered(TextFormat("%s %c",text("rankLabel"),race.rank()),480,140,44,resultColor);
+        centered(text("finishTime"),480,210,22,LIGHTGRAY);
+        centered(lc::formatRaceTime(*race.finishTime()).c_str(),480,243,40,RAYWHITE);
+        centered(TextFormat("%s  %s",text("bestTime"),lc::formatRaceTime(*bestTime).c_str()),480,303,22,accent);
+        centered(text(newBest?"newBest":"tryAgain"),480,342,18,LIGHTGRAY);
+        button(actionButton,text("again"));
+        button(helpButton,text("how"),false);
+        centered(text("againHint"),480,519,18,LIGHTGRAY);
+        centered(text(storageAvailable?"saved":"session"),480,554,15,LIGHTGRAY);
 #endif
     }
     EndDrawing();
@@ -370,6 +417,23 @@ void frame() {
         back=back || CheckCollisionPointRec(mouse,backButton);
     }
 #endif
+    if(ui.screen==lc::ui::Screen::Language) {
+#ifndef __EMSCRIPTEN__
+        if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+            for(int i=0;i<3;++i) if(CheckCollisionPointRec(GetMousePosition(),languageButtons[i])) pendingLanguage=i;
+#endif
+        if(pendingLanguage>=0 && pendingLanguage<3) {
+            ui.selectLanguage(static_cast<lc::ui::Language>(pendingLanguage));
+#ifdef __EMSCRIPTEN__
+            updateWebLanguage();
+#endif
+        }
+        pendingLanguage=-1;
+#ifdef __EMSCRIPTEN__
+        syncWebMenu();
+#endif
+        drawSandbox(); return;
+    }
     const auto action=ui.input(start,help,back,toggleDebug);
     if(action!=lc::ui::Action::None) {
         if(action==lc::ui::Action::StartRun || action==lc::ui::Action::RestartRun) {
@@ -403,6 +467,9 @@ void frame() {
 }
 }
 #ifdef __EMSCRIPTEN__
+extern "C" EMSCRIPTEN_KEEPALIVE void select_language(int language) {
+    if(language>=0 && language<3) pendingLanguage=language;
+}
 extern "C" EMSCRIPTEN_KEEPALIVE void request_menu_action(int action) {
     if(action>=1 && action<=3) pendingMenuAction=action;
 }
@@ -410,24 +477,32 @@ extern "C" EMSCRIPTEN_KEEPALIVE void request_menu_action(int action) {
 
 int main(int argc, char** argv) {
     InitWindow(1360, 690, "LAST CONNECTION - Time Attack");
+    loadUiFonts();
     const auto stored = lc::loadLocalBest(config);
     bestTime = stored.time;
     storageAvailable = stored.storageAvailable;
 #ifdef __EMSCRIPTEN__
     (void)argc;
     (void)argv;
-    for(const auto& item : lc::ui::copy) webCopy(item.key,item.text);
+    updateWebLanguage();
     syncWebMenu();
     emscripten_set_main_loop(frame, 0, 1);
 #else
     SetTargetFPS(60);
     const bool smoke = argc > 1 && std::strcmp(argv[1], "--smoke") == 0;
+    // Screenshot-only UI selection; no gameplay/config overrides.
+    if(smoke && argc>2) {
+        const std::string language=argv[2];
+        if(language=="zh" || language=="en" || language=="ja")
+            ui.selectLanguage(language=="zh"?lc::ui::Language::Chinese:language=="ja"?lc::ui::Language::Japanese:lc::ui::Language::English);
+    }
     int frames = 0;
     while (!WindowShouldClose() && (!smoke || frames < 120)) {
         frame();
         ++frames;
     }
     if (smoke) TakeScreenshot("sandbox.png");
+    UnloadFont(scFont); UnloadFont(jpFont);
     CloseWindow();
 #endif
     return 0;

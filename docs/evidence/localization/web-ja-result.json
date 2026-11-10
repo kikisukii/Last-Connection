@@ -1,0 +1,55 @@
+{
+  "url": "http://127.0.0.1:8001/",
+  "language": "ja",
+  "explicit_selection": true,
+  "reload_resets_language": true,
+  "bundled_font_loaded": true,
+  "fresh_context": true,
+  "wasm_http": 200,
+  "keyboard_both_directions": true,
+  "bike_boarding_and_following": true,
+  "finish_seconds": 98.77777777780211,
+  "expected_rank": "F",
+  "result_panel_verified": true,
+  "best_persisted_after_reload": true,
+  "page_errors": [],
+  "onboarding": true,
+  "responsive_sizes": [
+    [
+      1400,
+      820
+    ],
+    [
+      1024,
+      600
+    ],
+    [
+      800,
+      600
+    ],
+    [
+      640,
+      480
+    ],
+    [
+      640,
+      360
+    ],
+    [
+      390,
+      844
+    ],
+    [
+      360,
+      640
+    ],
+    [
+      320,
+      568
+    ]
+  ],
+  "start_routes": 3,
+  "debug_opt_in": true,
+  "optional_help_and_back": true,
+  "restart_without_tutorial_or_transfer": true
+}

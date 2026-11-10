@@ -8,8 +8,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--build', type=Path, default=Path('build/web'))
 parser.add_argument('--output', type=Path, default=Path('build/pages'))
 args = parser.parse_args()
-required = ['index.html', 'index.js', 'index.wasm']
-for name in required:
+required = ['index.html', 'index.js', 'index.wasm', 'index.data']
+for name in required + ['assets/fonts/LC-UI-SC.otf', 'assets/fonts/LC-UI-JP.otf', 'assets/fonts/OFL.txt']:
     if not (args.build / name).is_file():
         raise SystemExit('Missing runtime file: ' + name)
 args.output.mkdir(parents=True, exist_ok=True)

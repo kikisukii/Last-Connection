@@ -5,9 +5,15 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>LAST CONNECTION — Time Attack</title>
   <style>
+    @font-face { font-family:LC-SC; src:url('assets/fonts/LC-UI-SC.otf') format('opentype'); font-display:block; }
+    @font-face { font-family:LC-JP; src:url('assets/fonts/LC-UI-JP.otf') format('opentype'); font-display:block; }
     :root { color-scheme: dark; --bg:#121821; --panel:#1d2733; --ink:#e9edf2; --muted:#b8c2ce; --accent:#68e2b4; }
     * { box-sizing:border-box; }
-    body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.4 system-ui,sans-serif; }
+    body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.4 LC-SC,sans-serif; }
+    html[lang="ja"] body, html[lang="ja"] button { font-family:LC-JP,sans-serif; }
+    #language .sheet { max-width:950px; text-align:center; gap:28px; }
+    #language .actions { flex-wrap:wrap; }
+    #language button { min-width:180px; }
     main { height:100vh; height:100dvh; display:grid; place-items:center; }
     canvas { display:block; width:min(100vw,1360px,calc(100dvh * 1360 / 690)); height:auto; outline:none; }
     [hidden] { display:none !important; }
@@ -40,7 +46,7 @@
     .ranks { color:var(--accent); font-size:24px; letter-spacing:.12em; margin-top:8px; }
     .rank-hint { color:var(--muted); font-size:13px; }
     .actions { display:flex; justify-content:center; gap:12px; margin-top:16px; }
-    button { background:var(--accent); color:var(--bg); border:1px solid var(--accent); min-width:190px; padding:12px 24px; font:700 18px system-ui; cursor:pointer; }
+    button { background:var(--accent); color:var(--bg); border:1px solid var(--accent); min-width:190px; padding:12px 24px; font:700 18px LC-SC,sans-serif; cursor:pointer; }
     button.secondary { background:transparent; color:var(--accent); }
     button:focus-visible { outline:3px solid white; outline-offset:3px; }
     button:hover { filter:brightness(1.12); }
@@ -103,20 +109,25 @@
     }
   </style>
 </head>
-<body data-screen="start">
+<body data-screen="language">
   <main><canvas id="canvas" width="1360" height="690" tabindex="0" aria-label="LAST CONNECTION game" oncontextmenu="event.preventDefault()"></canvas></main>
-  <section id="onboarding" class="menu" aria-labelledby="game-title">
+  <section id="language" class="menu" aria-labelledby="language-title">
+    <div class="sheet"><h1>LAST CONNECTION</h1><h2 id="language-title">SELECT LANGUAGE</h2>
+      <div class="actions"><button data-language="0" lang="zh-CN" disabled>中文</button><button data-language="1" lang="en" disabled>English</button><button data-language="2" lang="ja" disabled>日本語</button></div>
+    </div>
+  </section>
+  <section id="onboarding" class="menu" aria-labelledby="game-title" hidden>
     <div class="sheet">
       <header>
         <h1 id="game-title" data-copy="title">LAST CONNECTION</h1>
         <p class="subtitle" data-copy="subtitle"></p>
-        <h2 data-copy="how"></h2><p class="goal" data-copy="goal"></p>
+        <h2 data-copy="how"></h2><p class="goal"><span data-copy="goalLabel"></span> / <span data-copy="goal"></span></p>
       </header>
       <div class="cards">
         <article class="card">
-          <div class="keys" aria-label="Left and right arrow keys"><kbd>←</kbd> / <kbd>→</kbd></div>
-          <p class="controls" data-copy="controls"></p>
-          <div class="lane-map" aria-hidden="true"><span>LEFT<br>VEHICLES</span><span class="you">CENTER<br>YOU</span><span>RIGHT<br>VEHICLES</span></div>
+          <div class="keys"><kbd>←</kbd> / <kbd>→</kbd></div>
+          <p class="controls"><span data-copy="controlsLabel"></span> / <span data-copy="controls"></span></p>
+          <div class="lane-map" aria-hidden="true"><span><b data-copy="left"></b><br><b data-copy="transport"></b></span><span class="you"><b data-copy="middle"></b><br><b data-copy="you"></b></span><span><b data-copy="right"></b><br><b data-copy="transport"></b></span></div>
           <p class="lane-copy"><strong data-copy="center"></strong><br><span data-copy="run"></span></p>
           <p class="lane-copy"><strong data-copy="sides"></strong><br><span data-copy="vehicles"></span></p>
         </article>
@@ -132,28 +143,28 @@
       <footer>
         <p class="deadline" data-copy="deadline"></p><p class="rank-caption" data-copy="rank"></p>
         <p class="ranks" data-copy="ranks"></p><p class="rank-hint" data-copy="rankHint"></p>
-        <div class="actions"><button id="start" disabled>START</button><button id="back" class="secondary" hidden>BACK</button></div>
-        <p class="key-hint">Click START or press ← / →</p>
+        <div class="actions"><button id="start" disabled data-copy="start"></button><button id="back" class="secondary" hidden data-copy="back"></button></div>
+        <p class="key-hint" data-copy="startHint"></p>
       </footer>
     </div>
   </section>
-  <section id="results" class="menu" aria-label="Run result" hidden>
-    <div class="sheet"><h1>RUN COMPLETE</h1><div id="result-rank"></div><div><p>TIME</p><div id="result-time"></div></div>
-      <div><p>BEST</p><div id="result-best"></div></div><p id="result-note"></p>
-      <div class="actions"><button id="again">PLAY AGAIN</button><button id="help" class="secondary">HOW TO PLAY</button></div>
-      <p class="key-hint">← / → also starts your next run.</p>
+  <section id="results" class="menu" aria-labelledby="result-headline" hidden>
+    <div class="sheet"><h1 id="result-headline"></h1><div id="result-rank"></div><div><p data-copy="finishTime"></p><div id="result-time"></div></div>
+      <div><p data-copy="bestTime"></p><div id="result-best"></div></div><p id="result-note"></p>
+      <div class="actions"><button id="again" data-copy="again"></button><button id="help" class="secondary" data-copy="how"></button></div>
+      <p class="key-hint" data-copy="againHint"></p>
     </div>
   </section>
-  <p id="status" role="status">Loading C++ / WebAssembly prototype…</p>
+  <p id="status" role="status">LAST CONNECTION…</p>
   <script>
     const canvas=document.getElementById('canvas');
     const status=document.getElementById('status');
-    const intro=document.getElementById('onboarding'), results=document.getElementById('results');
+    const intro=document.getElementById('onboarding'), results=document.getElementById('results'), language=document.getElementById('language');
     const start=document.getElementById('start'), back=document.getElementById('back');
     // Responsive layout does the wrapping; a measured fallback accommodates
     // platform font metrics and unusually short windows without clipping.
     const fitMenus=()=>{
-      for(const menu of [intro,results]) {
+      for(const menu of [intro,results,language]) {
         if(menu.hidden) continue;
         const sheet=menu.querySelector('.sheet'), css=getComputedStyle(menu);
         const height=menu.clientHeight-parseFloat(css.paddingTop)-parseFloat(css.paddingBottom);
@@ -163,30 +174,38 @@
       }
     };
     const menuObserver=new ResizeObserver(fitMenus);
-    for(const menu of [intro,results]) menuObserver.observe(menu.querySelector('.sheet'));
+    for(const menu of [intro,results,language]) menuObserver.observe(menu.querySelector('.sheet'));
     window.addEventListener('resize',fitMenus);
+    document.fonts.ready.then(fitMenus);
     const request=action=>{ if(window.Module && Module._request_menu_action) { Module._request_menu_action(action); canvas.focus({preventScroll:true}); } };
     start.addEventListener('click',()=>request(1));
     document.getElementById('again').addEventListener('click',()=>request(1));
     document.getElementById('help').addEventListener('click',()=>request(2));
     back.addEventListener('click',()=>request(3));
-    window.lcMenu={show(screen,time,rank,best,fresh) {
-      const names=['start','playing','results','help'];
+    document.querySelectorAll('[data-language]').forEach(button=>button.addEventListener('click',()=>{
+      if(window.Module && Module._select_language) Module._select_language(Number(button.dataset.language));
+    }));
+    window.lcMenu={copy:{},show(screen,time,rank,best,fresh) {
+      const t=key=>this.copy[key];
+      const names=['start','playing','results','help','language'];
       document.body.dataset.screen=names[screen]; document.body.dataset.ready='true';
+      language.hidden=screen!==4;
+      document.querySelectorAll('[data-language]').forEach(button=>button.disabled=false);
       intro.hidden=screen!==0 && screen!==3; results.hidden=screen!==2;
       canvas.setAttribute('aria-hidden',screen===1?'false':'true');
-      start.disabled=false; start.textContent=screen===3?'PLAY AGAIN':'START'; back.hidden=screen!==3;
-      intro.querySelector('.key-hint').textContent=screen===3?'Click PLAY AGAIN or press ← / →':'Click START or press ← / →';
+      start.disabled=false; start.textContent=t(screen===3?'again':'start'); back.hidden=screen!==3;
+      intro.querySelector('.key-hint').textContent=t(screen===3?'againHint':'startHint');
+      document.getElementById('result-headline').textContent=t(rank==='F'?'missed':'reached');
       document.getElementById('result-time').textContent=time;
-      document.getElementById('result-rank').textContent='RANK '+rank;
+      document.getElementById('result-rank').textContent=t('rankLabel')+' '+rank;
       document.getElementById('result-rank').style.color=rank==='F'?'#ffa100':'var(--accent)';
       document.getElementById('result-best').textContent=best;
-      document.getElementById('result-note').textContent=fresh?'NEW PERSONAL BEST':'Try another connection.';
+      document.getElementById('result-note').textContent=t(fresh?'newBest':'tryAgain');
       fitMenus();
       canvas.focus({preventScroll:true});
     }};
     var Module={canvas,print:(...args)=>console.log(...args),printErr:(...args)=>console.error(...args),
-      onRuntimeInitialized:()=>{status.textContent='Prototype running. Click the canvas to focus.';canvas.focus({preventScroll:true});},
+      onRuntimeInitialized:()=>{status.textContent='';canvas.focus({preventScroll:true});},
       onAbort:reason=>{status.textContent='Could not start: '+reason;document.body.dataset.ready='false';}
     };
     canvas.addEventListener('click',()=>canvas.focus({preventScroll:true}));
@@ -198,7 +217,7 @@
         event.preventDefault();event.stopImmediatePropagation();
         if(event.repeat) return;
         if((event.key==='Enter'||event.key===' ') && event.target instanceof HTMLButtonElement) event.target.click();
-        else request(1);
+        else if(document.body.dataset.screen!=='language') request(1);
       } else if(event.key==='ArrowLeft'||event.key==='ArrowRight') event.preventDefault();
     },true);
   </script>

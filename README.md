@@ -14,9 +14,11 @@ Current accepted tuning: Bike / Bus / Taxi / Express ride services last **4 / 3 
 
 For local play, see [Build and run](docs/BUILD.md).
 
+**Languages:** 中文 / English / 日本語. Select a language on entry; replay keeps it, reloading opens language selection again. [Localization and bundled fonts](docs/LOCALIZATION.md).
+
 ## Controls
 
-**← / →** moves one adjacent lane. Click **START** or press either arrow to begin; that starting input does not also move lanes. Transfers take 0.40 seconds; inputs during a transfer are discarded. After finishing, press either arrow or click **PLAY AGAIN** to retry immediately. **HOW TO PLAY** reopens the instructions only when requested. **F1** toggles the gameplay debug overlay (off by default).
+**← / →** moves one adjacent lane. After selecting a language, click **START** or press either arrow to begin; that starting input does not also move lanes. Transfers take 0.40 seconds; inputs during a transfer are discarded. After finishing, press either arrow or click **PLAY AGAIN** to retry immediately. **HOW TO PLAY** reopens the instructions only when requested. **F1** toggles the gameplay debug overlay (off by default).
 
 The start screen explains early prediction, automatic boarding, misses, temporary one-use rides, the airport and ranks. See [Onboarding verification](docs/ONBOARDING.md).
 

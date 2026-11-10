@@ -47,7 +47,14 @@ jobs:
       - name: Test packaged site in Chromium
         run: |
           python3 -m http.server 8000 --bind 127.0.0.1 --directory build/pages > /tmp/site-server.log 2>&1 &
-          python3 tests/web_smoke.py http://127.0.0.1:8000/ --output build/local-browser-evidence
+          pids=()
+          for language in zh en ja; do
+            python3 tests/web_smoke.py http://127.0.0.1:8000/ --language "$language" --output "build/local-browser-evidence/$language" &
+            pids+=("$!")
+          done
+          failed=0
+          for pid in "${pids[@]}"; do wait "$pid" || failed=1; done
+          exit "$failed"
       - name: Save local browser evidence
         if: always()
         uses: actions/upload-artifact@v5
@@ -83,6 +90,10 @@ jobs:
     runs-on: ubuntu-24.04
     needs: deploy
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [zh, en, ja]
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
@@ -95,10 +106,10 @@ jobs:
       - name: Play deployed Pages URL in fresh Chromium
         env:
           PLAY_URL: ${{ needs.deploy.outputs.page_url }}
-        run: python3 tests/web_smoke.py "$PLAY_URL" --output build/public-browser-evidence
+        run: python3 tests/web_smoke.py "$PLAY_URL" --language "${{ matrix.language }}" --output build/public-browser-evidence
       - name: Save external browser evidence
         if: always()
         uses: actions/upload-artifact@v5
         with:
-          name: public-browser-evidence
+          name: public-browser-evidence-${{ matrix.language }}
           path: build/public-browser-evidence

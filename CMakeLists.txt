@@ -6,6 +6,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+if(MSVC)
+    add_compile_options(/utf-8)
+endif()
+
 include(FetchContent)
 set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
@@ -22,14 +26,19 @@ add_library(gameplay src/gameplay/movement.cpp src/gameplay/vehicles.cpp
     src/gameplay/catch_detection.cpp src/gameplay/game.cpp src/gameplay/live_traffic.cpp src/gameplay/forward_motion.cpp src/gameplay/time_attack.cpp
     src/gameplay/traffic_safety.cpp src/gameplay/encounter_planner.cpp)
 target_include_directories(gameplay PUBLIC include)
-target_compile_options(gameplay PRIVATE -Wall -Wextra -Wpedantic)
+if(NOT MSVC)
+    target_compile_options(gameplay PRIVATE -Wall -Wextra -Wpedantic)
+endif()
 
 add_executable(last_connection src/main.cpp src/best_time_storage.cpp)
 target_link_libraries(last_connection PRIVATE gameplay)
 add_executable(lc_smoke src/smoke.cpp)
 foreach(app IN ITEMS last_connection lc_smoke)
     target_link_libraries(${app} PRIVATE raylib)
-    target_compile_options(${app} PRIVATE -Wall -Wextra -Wpedantic)
+    if(NOT MSVC)
+        target_compile_options(${app} PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
+
     if(EMSCRIPTEN)
         set_target_properties(${app} PROPERTIES SUFFIX ".html")
         # Shell-only onboarding/CSS edits must regenerate the emitted HTML.
@@ -41,7 +50,14 @@ foreach(app IN ITEMS last_connection lc_smoke)
         target_link_options(${app} PRIVATE -static)
     endif()
 endforeach()
+file(GLOB UI_FONT_ASSETS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts/*")
+set_property(TARGET last_connection APPEND PROPERTY LINK_DEPENDS ${UI_FONT_ASSETS})
+add_custom_command(TARGET last_connection POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    "${CMAKE_CURRENT_SOURCE_DIR}/assets" "$<TARGET_FILE_DIR:last_connection>/assets")
 if(EMSCRIPTEN)
+    target_link_options(last_connection PRIVATE
+        "--preload-file=${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts@assets/fonts")
     set_target_properties(last_connection PROPERTIES OUTPUT_NAME index)
 else()
     include(CTest)

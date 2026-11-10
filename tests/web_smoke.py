@@ -7,6 +7,7 @@ import argparse
 import io
 import json
 import time
+import re
 from pathlib import Path
 from urllib.parse import urljoin
 
@@ -16,9 +17,18 @@ from playwright.sync_api import sync_playwright
 parser = argparse.ArgumentParser()
 parser.add_argument('url')
 parser.add_argument('--output', type=Path, default=Path('build/browser-evidence'))
+parser.add_argument('--language', choices=['zh','en','ja'], default='en')
 parser.add_argument('--ui-only', action='store_true', help='Only onboarding/layout/input checks')
 args = parser.parse_args()
 args.output.mkdir(parents=True, exist_ok=True)
+index={'zh':0,'en':1,'ja':2}[args.language]
+tag=['zh-CN','en','ja'][index]
+copy={}
+for line in (Path(__file__).resolve().parents[1]/'include/localization_data.inc').read_text(encoding='utf-8').splitlines():
+    if line.startswith('LC_TEXT('):
+        values=[json.loads(v) for v in re.findall(r'"(?:[^"\\]|\\.)*"',line)]
+        copy[values[0]]=values[index+1]
+
 
 
 def near_color(pixel, rgb):
@@ -40,29 +50,44 @@ with sync_playwright() as p:
     page = context.new_page()
     errors = []
     page.on('pageerror', lambda error: errors.append(str(error)))
-    for asset in ['index.js', 'index.wasm']:
+    for asset in ['index.js', 'index.wasm', 'index.data', 'assets/fonts/LC-UI-SC.otf', 'assets/fonts/LC-UI-JP.otf']:
         response = context.request.get(urljoin(args.url, asset))
         assert response.status == 200, (asset, response.status)
         if asset.endswith('.wasm'):
             assert response.body()[:4] == b'\0asm', 'Not a WASM module'
             assert 'application/wasm' in response.headers.get('content-type', ''), response.headers
     assert page.goto(args.url).status == 200
-    page.locator('#status').filter(has_text='Prototype running').wait_for(timeout=60000)
+    page.locator('body[data-ready="true"]').wait_for(timeout=60000)
     canvas = page.locator('#canvas')
     assert canvas.get_attribute('width') == '1360'
     assert page.evaluate("localStorage.getItem('last-connection-best-v1')") is None
     page.locator('body[data-ready="true"]').wait_for()
+    def fit_check(menu):
+        page.wait_for_function("""selector => {const r=document.querySelector(selector+' .sheet').getBoundingClientRect();
+            return r.top>=0 && r.bottom<=innerHeight+1 && r.left>=0 && r.right<=innerWidth+1;}""",arg=menu)
+        for button in page.locator(menu+' button:visible').all():
+            box=button.bounding_box()
+            viewport=page.viewport_size
+            assert box['x']>=0 and box['y']>=0 and box['x']+box['width']<=viewport['width']+1 and box['y']+box['height']<=viewport['height']+1
+    for width,height in [(320,568),(640,360),(1400,820)]:
+        page.set_viewport_size({'width':width,'height':height})
+        fit_check('#language')
+    def select_language():
+        page.locator('body[data-screen="language"][data-ready="true"]').wait_for(timeout=60000)
+        assert not page.locator('#onboarding').is_visible()
+        canvas.press('ArrowLeft'); page.wait_for_timeout(50)
+        assert page.locator('body').get_attribute('data-screen')=='language'
+        page.locator(f'[data-language="{index}"]').click()
+        page.locator('body[data-screen="start"]').wait_for()
+        assert page.locator('html').get_attribute('lang')==tag
+        page.evaluate('document.fonts.ready')
+        family='LC-JP' if args.language=='ja' else 'LC-SC'
+        assert page.evaluate('(family)=>document.fonts.check("16px "+family)',family)
+    page.screenshot(path=str(args.output/'language-selection.png'))
+    select_language()
     assert page.locator('#onboarding').is_visible() and not page.locator('#results').is_visible()
-    assert page.locator('#start').inner_text() == 'START'
-    expected = ["HOW TO PLAY", "REACH THE AIRPORT AS FAST AS YOU CAN.",
-                "CHANGE TO AN ADJACENT LANE", "Run at normal speed.",
-                "Ride passing vehicles to gain speed.", "PREDICT THE INTERSECTION",
-                "Don't wait until you're next to a vehicle.", "Move early and aim for where it will be.",
-                "If your timing and speed are right, you'll board automatically.",
-                "Keep running. You'll lose speed, but you can recover.",
-                "EVERY RIDE IS TEMPORARY.", "Each vehicle can only be used once.",
-                "Look for your next connection.", "REACH THE AIRPORT BEFORE THE DEADLINE.",
-                "Finish faster to improve your rank.", "S = fastest    F = missed flight"]
+    assert page.locator('#start').inner_text() == copy['start']
+    expected=[copy[key] for key in ['how','goal','controls','run','vehicles','predict','early','aim','automatic','recover','temporary','once','next','deadline','rank','rankHint']]
     intro = page.locator('#onboarding').inner_text()
     assert all(' '.join(line.split()) in ' '.join(intro.split()) for line in expected), intro
     assert not any(word in intro for word in ['DEBUG', 'Vehicle ID', 'Service Distance', '90'])
@@ -84,14 +109,14 @@ with sync_playwright() as p:
     page.screenshot(path=str(args.output/'start.png'))
     # Each menu start route consumes the input; no initial side-lane move.
     for route in ['ArrowLeft','ArrowRight','click']:
-        if route=='click': page.get_by_role('button',name='START',exact=True).click()
+        if route=='click': page.get_by_role('button',name=copy['start'],exact=True).click()
         else: canvas.press(route)
         page.locator('body[data-screen="playing"]').wait_for()
         page.wait_for_timeout(500)
         im=Image.open(io.BytesIO(canvas.screenshot())).convert('RGB')
         assert near_color(im.getpixel((340,370)),(104,226,180)), ('Start also moved player',route)
         assert not page.locator('#onboarding').is_visible()
-        page.reload(); page.locator('body[data-ready="true"]').wait_for()
+        page.reload(); select_language()
     canvas.press('ArrowLeft')  # final start only
     page.locator('body[data-screen="playing"]').wait_for()
     def debug_pixels():
@@ -146,10 +171,15 @@ with sync_playwright() as p:
         finish_time = float(record.splitlines()[1])
         assert 90 < finish_time < 110, finish_time  # one short Bike ride, then run
         page.locator('body[data-screen="results"]').wait_for()
-        assert page.locator('#result-rank').inner_text()=='RANK F'
+        assert page.locator('#result-rank').inner_text()==copy['rankLabel']+' F'
+        assert page.locator('#result-headline').inner_text()==copy['missed']
+        assert page.locator('html').get_attribute('lang')==tag
+        for width,height in [(320,568),(640,360),(1400,820)]:
+            page.set_viewport_size({'width':width,'height':height})
+            fit_check('#results')
         page.screenshot(path=str(args.output/'finish.png'))
         shown_time=page.locator('#result-time').inner_text()
-        page.get_by_role('button',name='HOW TO PLAY',exact=True).click()
+        page.get_by_role('button',name=copy['how'],exact=True).click()
         page.locator('body[data-screen="help"]').wait_for()
         assert page.locator('#onboarding').is_visible()
         for width,height in tested_sizes:
@@ -160,22 +190,25 @@ with sync_playwright() as p:
                 rect=page.locator(selector).bounding_box()
                 assert rect['x']>=0 and rect['y']>=0 and rect['x']+rect['width']<=width+1 and rect['y']+rect['height']<=height+1, ('help',width,height,selector,rect)
         page.set_viewport_size({'width':1400,'height':820})
-        page.get_by_role('button',name='BACK' ,exact=True).click()
+        page.get_by_role('button',name=copy['back'] ,exact=True).click()
         page.locator('body[data-screen="results"]').wait_for()
         assert page.locator('#result-time').inner_text()==shown_time
-        page.get_by_role('button',name='PLAY AGAIN',exact=True).click()
+        page.get_by_role('button',name=copy['again'],exact=True).click()
         page.locator('body[data-screen="playing"]').wait_for()
         page.wait_for_timeout(500)
         restart=Image.open(io.BytesIO(canvas.screenshot(path=str(args.output/'restart.png')))).convert('RGB')
+        assert page.locator('html').get_attribute('lang')==tag
         assert not page.locator('#onboarding').is_visible(), 'Restart forced tutorial'
         assert near_color(restart.getpixel((340,370)),(104,226,180)), 'Restart triggered transfer'
         page.reload()
-        page.locator('#status').filter(has_text='Prototype running').wait_for(timeout=60000)
+        page.locator('body[data-ready="true"]').wait_for(timeout=60000)
+        assert page.locator('body').get_attribute('data-screen')=='language'
+        assert page.locator('#language').is_visible() and not page.locator('#onboarding').is_visible()
         assert page.evaluate("localStorage.getItem('last-connection-best-v1')") == record, 'Best time did not persist'
         page.locator('body[data-ready="true"]').wait_for()
         page.screenshot(path=str(args.output/'reloaded.png'))
         assert not errors, errors
-        result = {'url':args.url,'fresh_context':True,'wasm_http':200,'keyboard_both_directions':True,
+        result = {'url':args.url,'language':args.language,'explicit_selection':True,'reload_resets_language':True,'bundled_font_loaded':True,'fresh_context':True,'wasm_http':200,'keyboard_both_directions':True,
                   'bike_boarding_and_following':True,'finish_seconds':finish_time,'expected_rank':'F',
                   'result_panel_verified':True,'best_persisted_after_reload':True,'page_errors':errors,
                   'onboarding':True,'responsive_sizes':tested_sizes,'start_routes':3,'debug_opt_in':True,

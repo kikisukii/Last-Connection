@@ -1,0 +1,14 @@
+{
+  "SC": {
+    "bytes": 127308,
+    "codepoints": 380,
+    "sha256": "b6b997b405c2ba1c7d2ce05cc7661af3bfb6ea322084ff52e9066b3aa144d3e5",
+    "source_sha256": "2c76254f6fc379fddfce0a7e84fb5385bb135d3e399294f6eeb6680d0365b74b"
+  },
+  "JP": {
+    "bytes": 127660,
+    "codepoints": 380,
+    "sha256": "d111025eb99e3488696aa40456355d8976140da657e2d76e9eecc44fcae1de95",
+    "source_sha256": "68a3fc98800b2a27b371f2fb79991daf3633bd89309d4ffaa6946fd587f375b5"
+  }
+}
