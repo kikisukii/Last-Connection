@@ -1,0 +1,12 @@
+{
+  "url": "http://127.0.0.1:8000/",
+  "fresh_context": true,
+  "wasm_http": 200,
+  "keyboard_both_directions": true,
+  "bike_boarding_and_following": true,
+  "finish_seconds": 98.72777777780207,
+  "expected_rank": "F",
+  "result_panel_verified": true,
+  "best_persisted_after_reload": true,
+  "page_errors": []
+}

@@ -1,12 +1,14 @@
 # LAST CONNECTION
 
+[**PLAY IN BROWSER**](https://kikisukii.github.io/Last-Connection/)
+
 A minimalist two-button time-attack gameplay prototype about predicting relative velocity and timing transfers between moving vehicles.
 
 **First Playable / Playtest Build** — accepted for external playtesting by the project owner. Prototype balance is still subject to feedback.
 
 ## Play
 
-The owner authorized Public visibility and GitHub Pages has been enabled. The browser build is being published and verified by GitHub Actions; a verified **PLAY IN BROWSER** link will be added after the first deployment.
+[**PLAY IN BROWSER**](https://kikisukii.github.io/Last-Connection/) — no installation required. The deployed build passed a fresh-browser full-run check, including boarding, finish/rank and best-time persistence.
 
 For local play, see [Build and run](docs/BUILD.md).
 

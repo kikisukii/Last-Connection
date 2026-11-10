@@ -163,3 +163,13 @@ This file records engineering observations. It does not invent user playtests.
 ### First Playable deployment resumed
 
 The owner explicitly authorized Public visibility. GitHub confirmed the change and Pages Source=workflow; the prior plan blocker is resolved. Native12-suite and WebAssembly240/367506/56-check verification passed. Desktop browser control again stopped at URL identification, so full browser verification is assigned to isolated Actions Chromium tests against both the packaged local site and the deployed public URL. No gameplay source changed. Deployment evidence will be recorded after the pipeline completes.
+
+### First Playable published and verified
+
+**Problem:** Complete the authorized public delivery after resolving the private-plan limitation, with reproducible browser evidence.
+
+**Hypothesis:** A fresh Chromium context on an independent runner can verify the packaged runtime and actual public URL without depending on the local desktop browser control limitation.
+
+**Change:** Published source commit `305e9aa` while preserving initial commit `e12e53a`; enabled official Actions Pages deployment; added the verified README play link and retained browser results/screenshots. The `v0.1-playtest` milestone records this verified prototype. No gameplay code or parameters changed.
+
+**Result:** [Actions run 42805243312](https://github.com/kikisukii/Last-Connection/actions/runs/42805243312) passed Build Web, Deploy Pages and Verify public browser demo. The packaged local site and [public Pages URL](https://kikisukii.github.io/Last-Connection/) both loaded real WASM in clean contexts, accepted both arrow directions, caught/followed Bike, returned to CENTER, finished a complete race, displayed rank F and retained Best Time after reload. Finish times were 98.7278 and 98.7611 game seconds; no page errors. Public screenshots were inspected for SUCCESS, rank F and persisted best. See `FIRST_PLAYABLE.md` and its evidence links. Desktop Edge full-run automation remained unavailable due to the URL-identification guard; isolated CI browser verification is not represented as manual playtesting. The owner already accepted this gameplay milestone; further balance remains subject to external playtesting.
