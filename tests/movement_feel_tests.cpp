@@ -42,7 +42,7 @@ int main() {
         for(int i=0;i<4;++i) {
             const auto& s=c.vehicleSpecs[i];
             check(s.speed==std::array<double,4>{20,32,45,60}[i] && s.length==std::array<double,4>{3,10,5,15}[i] &&
-                  s.catchZoneLength==std::array<double,4>{2,7,3.5,7}[i] && s.rideServiceDistance==std::array<double,4>{160,220,200,150}[i],"vehicle tuning changed");
+                  s.catchZoneLength==std::array<double,4>{2,7,3.5,7}[i] && s.rideServiceDistance()==std::array<double,4>{80,96,90,90}[i],"vehicle tuning changed");
             check(s.maxBoardingRelativeSpeed==std::array<double,4>{9,19,27,29}[i],"V0.3 thresholds");
         }
         lc::Movement m;
@@ -56,7 +56,7 @@ int main() {
         lc::Game used;
         attempt(used,target(used,lc::VehicleType::Bike,1,.1,lc::Lane::Left)); used.update(.1);
         check(used.vehicleConsumed(1) && used.attachedVehicle()==1 && used.player().transferring(),"consume exactly on catch before transfer ends");
-        check(!used.serviceCompleted(1) && near(used.remainingRideDistance(),160),"consume incorrectly ended service");
+        check(!used.serviceCompleted(1) && near(used.remainingRideDistance(),80),"consume incorrectly ended service");
         check(!used.requestTransfer(1,{}),"attached lateral transfer cancelled");
         used.update(.3); leave(used);
         check(near(*used.timeSinceVehicleExit(),.4),"manual exit clock incorrect");

@@ -26,7 +26,7 @@ int main() {
         // Fixed historical trajectory fixture; V0.3 defaults covered separately.
         config.lateralTransferDuration = .25; config.normalDeceleration = 10;
         // Isolate existing recovery physics from the new boarding/service tuning.
-        for (auto& spec : config.vehicleSpecs) { spec.maxBoardingRelativeSpeed = 30; spec.rideServiceDistance = 100000; }
+        for (auto& spec : config.vehicleSpecs) { spec.maxBoardingRelativeSpeed = 30; spec.rideServiceDuration = 100000 / spec.speed; }
         auto step = lc::advanceForward(42, 1, config);
         require(near(step.speed, 32) && near(step.distance, 37), "high-speed integration");
         step = lc::advanceForward(42, 4, config);

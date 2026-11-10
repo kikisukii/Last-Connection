@@ -114,36 +114,40 @@ void drawSandbox() {
     if (game.currentVehicle()) {
         const auto& ride = *game.currentVehicle();
         DrawText(TextFormat("Current ID: %u / %s / %.0f u/s", static_cast<unsigned>(ride.id), lc::vehicleName(ride.type), ride.speed), debugX, 230, 16, accent);
-        DrawText(TextFormat("Service: %.1f / VEHICLE USED: YES", game.remainingRideDistance()), debugX, 251, 15, accent);
+        DrawText(TextFormat("Ride time: %.2f / %.2fs", game.elapsedRideTime(), game.currentRideDuration()), debugX, 250, 16, accent);
+        DrawText(TextFormat("Time remaining: %.2fs", game.remainingRideTime()), debugX, 270, 16, accent);
+        DrawText(TextFormat("Distance remaining: %.1f / USED", game.remainingRideDistance()), debugX, 290, 15, accent);
     } else {
         DrawText("Current ID: -- / Speed: --", debugX, 230, 16, LIGHTGRAY);
-        DrawText("Service: -- / VEHICLE USED: N/A", debugX, 251, 15, LIGHTGRAY);
+        DrawText("Ride time: -- / --s", debugX, 250, 16, LIGHTGRAY);
+        DrawText("Time remaining: --s", debugX, 270, 16, LIGHTGRAY);
+        DrawText("Distance remaining: -- / USED: N/A", debugX, 290, 15, LIGHTGRAY);
     }
     if (game.lastConsumedVehicle())
-        DrawText(TextFormat("Last used ID %u / Completed: %s", static_cast<unsigned>(*game.lastConsumedVehicle()), game.serviceCompleted(*game.lastConsumedVehicle())?"YES":"NO"), debugX, 272, 15, ORANGE);
-    else DrawText("Last used: none", debugX, 272, 15, LIGHTGRAY);
+        DrawText(TextFormat("Last used ID %u / Completed: %s", static_cast<unsigned>(*game.lastConsumedVehicle()), game.serviceCompleted(*game.lastConsumedVehicle())?"YES":"NO"), debugX, 312, 15, ORANGE);
+    else DrawText("Last used: none", debugX, 312, 15, LIGHTGRAY);
     const auto& attempt = game.transferDebug();
-    DrawText(lc::outcomeName(attempt.outcome), debugX, 297, 15, game.attachedVehicle() ? accent : RAYWHITE);
+    DrawText(lc::outcomeName(attempt.outcome), debugX, 337, 15, game.attachedVehicle() ? accent : RAYWHITE);
     if (attempt.targetAtStart) {
         const auto& target = *attempt.targetAtStart;
         DrawText(TextFormat("Target ID: %u / %s / Limit: %.0f", static_cast<unsigned>(target.id),
-                 lc::vehicleName(target.type), config.vehicleSpecs[static_cast<std::size_t>(target.type)].maxBoardingRelativeSpeed), debugX, 317, 15, vehicleColor(target.type));
+                 lc::vehicleName(target.type), config.vehicleSpecs[static_cast<std::size_t>(target.type)].maxBoardingRelativeSpeed), debugX, 357, 15, vehicleColor(target.type));
         DrawText(TextFormat("Window: %.3f-%.3fs / Penalty: %.1f", attempt.prediction.enterTime,
-                 attempt.prediction.exitTime, attempt.penaltyApplied), debugX, 337, 15, LIGHTGRAY);
+                 attempt.prediction.exitTime, attempt.penaltyApplied), debugX, 377, 15, LIGHTGRAY);
     } else {
-        DrawText(attempt.excludedUsedVehicle?"TARGET NONE / VEHICLE_ALREADY_USED":"No target / bright box = Catch Zone", debugX, 317, 15, LIGHTGRAY);
-        DrawText(TextFormat("Last miss penalty: %.1f", attempt.penaltyApplied), debugX, 337, 15, LIGHTGRAY);
+        DrawText(attempt.excludedUsedVehicle?"TARGET NONE / VEHICLE_ALREADY_USED":"No target / bright box = Catch Zone", debugX, 357, 15, LIGHTGRAY);
+        DrawText(TextFormat("Last miss penalty: %.1f", attempt.penaltyApplied), debugX, 377, 15, LIGHTGRAY);
     }
     for (int i = 0; i < 2; ++i) {
         const auto lane = i == 0 ? lc::Lane::Left : lc::Lane::Right;
         const auto& info = traffic.laneDebug(lane);
-        const int y = 366 + i * 57;
+        const int y = 406 + i * 57;
         DrawText(TextFormat("%s: %u active / Pending: %s", lc::laneName(lane), static_cast<unsigned>(info.activeCount),
                  info.pendingVehicle ? lc::vehicleName(*info.pendingVehicle) : "--"), debugX, y, 15, RAYWHITE);
         DrawText(TextFormat("Spawn: %s / Next: %.2fs", info.blocked ? "BLOCKED" : "READY", info.nextSpawnTime), debugX, y + 18, 14, info.blocked ? ORANGE : LIGHTGRAY);
         DrawText(TextFormat("Reason: %s", info.blockReason), debugX, y + 35, 14, LIGHTGRAY);
     }
-    DrawText(traffic.encounterDebug().status, debugX, 481, 14, accent);
+    DrawText(traffic.encounterDebug().status, debugX, 521, 14, accent);
     // Additional diagnostics live outside the unchanged 960x540 game area.
     constexpr int dx=975;
     DrawLine(950,85,950,635,Color{54,66,80,255});
@@ -221,7 +225,7 @@ void drawSandbox() {
     DrawRectangle(28, 488, 530, 7, Color{54,66,80,255});
     DrawRectangle(28, 488, static_cast<int>(530 * race.progress()), 7, accent);
     DrawText(TextFormat("AIRPORT: %.1f units left / %.0f%%", race.remainingDistance(), race.progress() * 100), 28, 504, 17, RAYWHITE);
-    DrawText(TextFormat("BEST %s%s", bestTime ? lc::formatRaceTime(*bestTime).c_str() : "--:--.--", storageAvailable ? "" : " (session)"), 600, 504, 17, accent);
+    DrawText(TextFormat("BEST %s%s", bestTime ? lc::formatRaceTime(*bestTime).c_str() : "--:--.--", storageAvailable ? "" : " (session)"), 330, 635, 17, accent);
     if (race.late() && !race.finished()) DrawText("MISSED FLIGHT - keep going for your finish time", 28, 75, 14, ORANGE);
 
     if (!started || race.finished()) {

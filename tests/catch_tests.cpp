@@ -18,7 +18,7 @@ int main() {
         lc::GameplayConfig baseline;
         // Fixed historical trajectory fixture; V0.3 defaults covered separately.
         baseline.lateralTransferDuration = .25; baseline.normalDeceleration = 10;
-        for (auto& spec : baseline.vehicleSpecs) { spec.maxBoardingRelativeSpeed = 30; spec.rideServiceDistance = 100000; }
+        for (auto& spec : baseline.vehicleSpecs) { spec.maxBoardingRelativeSpeed = 30; spec.rideServiceDuration = 100000 / spec.speed; }
         const auto crossing = lc::predictCatch(0, 12, -2, 32, 1, .25, 30);
         require(crossing.canCatch() && near(crossing.enterTime, .075) && near(crossing.exitTime, .125), "whole-window intersection lost between endpoints");
         require(lc::predictCatch(0, 12, 1, 12, 2, .25, 0).canCatch(), "equal-speed boundary should catch");

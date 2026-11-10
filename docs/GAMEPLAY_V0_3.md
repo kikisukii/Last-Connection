@@ -1,5 +1,7 @@
 # V0.3 Movement Feel
 
+Current accepted tuning follow-up: [Ride Service Duration](RIDE_SERVICE_DURATION.md) uses 4 / 3 / 2 / 1.5 seconds (80 / 96 / 90 / 90 units). The owner accepted it for deployment on 2026-11-10. The First Playable and verification counts recorded below describe the earlier baseline.
+
 Owner accepted this version as First Playable on 2026-11-10; final balance remains open. This is the current implementation, following the owner's clarification on 2026-11-10. It supersedes V0.2's whole-window boarding speed gate and service-exhaustion-only consumption. These are prototype tuning values, not final balance values. Automated verification does not establish game feel.
 
 ## Parameters and exact calculation

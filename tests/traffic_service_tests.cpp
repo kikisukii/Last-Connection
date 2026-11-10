@@ -78,7 +78,7 @@ int main() {
 
         // B: service starts at actual catch, not generation or transfer start.
         const double service = speedLadder.remainingRideDistance();
-        require(near(service, c.vehicleSpecs[3].rideServiceDistance), "service charged before catch at end of transfer");
+        require(near(service, c.vehicleSpecs[3].rideServiceDistance()), "service charged before catch at end of transfer");
         speedLadder.update(1);
         require(near(speedLadder.remainingRideDistance(), service - 60) && speedLadder.player().forwardSpeed() == 60, "riding distance/speed incorrect");
         speedLadder.update(speedLadder.remainingRideDistance() / 60);
@@ -102,7 +102,7 @@ int main() {
         partial.requestTransfer(-1,std::vector<lc::Vehicle>{{100,lc::VehicleType::Bike,lc::Lane::Left,partial.player().forwardPosition(),20,3,0}});
         partial.update(c.lateralTransferDuration);
         require(!partial.attachedVehicle() && partial.vehicleConsumed(100) && !partial.serviceCompleted(100), "manual departure allowed a second ride");
-        auto shortService = c; shortService.vehicleSpecs[0].rideServiceDistance = 1;
+        auto shortService = c; shortService.vehicleSpecs[0].rideServiceDuration = 1 / shortService.vehicleSpecs[0].speed;
         lc::Game midTransfer(shortService);
         midTransfer.requestTransfer(-1, std::vector<lc::Vehicle>{{8,lc::VehicleType::Bike,lc::Lane::Left,0,20,3,0}});
         midTransfer.update(.04); const double x = midTransfer.player().lateralPosition();

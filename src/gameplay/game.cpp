@@ -12,7 +12,8 @@ Game::Game(GameplayConfig config) : player_(config) {
     }
     for (const auto& spec : config.vehicleSpecs) {
         if (!std::isfinite(spec.maxBoardingRelativeSpeed) || spec.maxBoardingRelativeSpeed < 0 ||
-            !std::isfinite(spec.rideServiceDistance) || spec.rideServiceDistance <= 0)
+            !std::isfinite(spec.rideServiceDuration) || spec.rideServiceDuration <= 0 ||
+            !std::isfinite(spec.rideServiceDistance()) || spec.rideServiceDistance() <= 0)
             throw std::invalid_argument("Invalid boarding/service parameters.");
         if (!std::isfinite(spec.catchZoneLength) || spec.catchZoneLength <= 0.0 || spec.catchZoneLength > spec.length) {
             throw std::invalid_argument("Catch zone must be positive and contained in the vehicle body.");
@@ -130,7 +131,9 @@ void Game::update(double seconds) {
                 player_.setForwardSpeed(target.speed);
                 attachedVehicle_ = target.id;
                 currentVehicle_ = target;
-                const double budget = player_.config().vehicleSpecs[static_cast<std::size_t>(target.type)].rideServiceDistance;
+                // Keep the existing distance event integrator; duration is the
+                // sole tuning input, using the attached vehicle's constant speed.
+                const double budget = target.speed * player_.config().vehicleSpecs[static_cast<std::size_t>(target.type)].rideServiceDuration;
                 const auto [entry, inserted] = rideRemainingById_.try_emplace(target.id, budget);
                 if (!inserted) throw std::logic_error("Consumed vehicle selected for boarding");
                 lastConsumedVehicle_ = target.id;

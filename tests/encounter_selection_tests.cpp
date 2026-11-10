@@ -21,7 +21,7 @@ int main() {
         lc::GameplayConfig c;
         for(std::size_t t=0;t<4;++t) {
             require(c.vehicleSpecs[t].maxBoardingRelativeSpeed==std::array<double,4>{9,19,27,29}[t],"wrong V0.3 threshold");
-            require(c.vehicleSpecs[t].rideServiceDistance==std::array<double,4>{160,220,200,150}[t],"service tuning changed");
+            require(c.vehicleSpecs[t].rideServiceDistance()==std::array<double,4>{80,96,90,90}[t],"service tuning changed");
             require(c.vehicleSpecs[t].catchZoneLength==std::array<double,4>{2,7,3.5,7}[t],"Catch Zone changed");
         }
         require(c.lateralTransferDuration==.40 && c.normalRunSpeed==12 && c.normalDeceleration==15 && c.missPenalty==5 && c.finishDistance==1200 && c.deadline==90,"protected rules changed");

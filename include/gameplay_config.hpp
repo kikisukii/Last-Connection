@@ -11,7 +11,9 @@ struct VehicleSpec {
     double length; // forward units; position denotes the body center
     double catchZoneLength = 1.0; // centered inside body; prototype tuning
     double maxBoardingRelativeSpeed = 30.0;
-    double rideServiceDistance = 200.0; // starts at actual attachment, not spawn
+    // Prototype tuning values, not final balance. Starts at actual attachment.
+    double rideServiceDuration = 4.0; // seconds; the sole service tuning parameter
+    double rideServiceDistance() const { return speed * rideServiceDuration; }
 };
 
 struct VehicleSeed {
@@ -48,8 +50,9 @@ struct GameplayConfig {
         // permits an intersection in the first 1/15 s of the next transfer.
         // Taxi/Express margins cover 32 -> 26 -> 20 and 45 -> 39 -> 33.
         // See docs/GAMEPLAY_V0_3.md for exact derivation and playtest limits.
-        {20.0, 3.0, 2.0, 9.0, 160.0}, {32.0, 10.0, 7.0, 19.0, 220.0},
-        {45.0, 5.0, 3.5, 27.0, 200.0}, {60.0, 15.0, 7.0, 29.0, 150.0}
+        // Final column: rideServiceDuration (seconds), NOT distance.
+        {20.0, 3.0, 2.0, 9.0, 4.0}, {32.0, 10.0, 7.0, 19.0, 3.0},
+        {45.0, 5.0, 3.5, 27.0, 2.0}, {60.0, 15.0, 7.0, 29.0, 1.5}
     }};
     // Relative weights within a legal opportunity tier; live frequencies need
     // not be equal. Historical fixtures can still draw these weights directly.

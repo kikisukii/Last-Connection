@@ -82,7 +82,7 @@ int main() {
         // Catch a real generated bike and keep its ID/offset through 30s of riding.
         lc::GameplayConfig c; c.vehicleTypeWeights = {1,0,0,0};
         c.laneFirstSpawnTimes[1] = 1000;
-        c.vehicleSpecs[0].rideServiceDistance = 1000; // isolate offset retention from service-end test
+        c.vehicleSpecs[0].rideServiceDuration = 1000 / c.vehicleSpecs[0].speed; // isolate offset retention from service-end test
         lc::LiveTraffic traffic(c, 7); lc::Game game(c); bool attempted = false; double offset = 0;
         for (int i = 0; i < 4200; ++i) {
             if (!attempted) for (const auto& v : traffic.current()) {

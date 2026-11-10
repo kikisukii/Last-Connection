@@ -46,7 +46,7 @@ std::string scoreRulesKey(const GameplayConfig& c) {
          c.leftLaneProbability, c.firstVehicleEntryTime, c.minimumSpawnInterval,
          c.maximumSpawnInterval, c.finishDistance, c.deadline}) out << '|' << value;
     for (const auto& spec : c.vehicleSpecs) out << '|' << spec.speed << '|' << spec.length << '|' << spec.catchZoneLength
-        << '|' << spec.maxBoardingRelativeSpeed << '|' << spec.rideServiceDistance;
+        << '|' << spec.maxBoardingRelativeSpeed << '|' << spec.rideServiceDistance();
     for (double value : c.laneFirstSpawnTimes) out << '|' << value;
     for (double value : c.laneMinimumSpawnIntervals) out << '|' << value;
     for (double value : c.laneMaximumSpawnIntervals) out << '|' << value;

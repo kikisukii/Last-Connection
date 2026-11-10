@@ -10,6 +10,8 @@ A minimalist two-button time-attack gameplay prototype about predicting relative
 
 [**PLAY IN BROWSER**](https://kikisukii.github.io/Last-Connection/) — no installation required. The deployed build passed a fresh-browser full-run check, including boarding, finish/rank and best-time persistence.
 
+Current accepted tuning: Bike / Bus / Taxi / Express ride services last **4 / 3 / 2 / 1.5 game seconds**. See [Ride service duration](docs/RIDE_SERVICE_DURATION.md).
+
 For local play, see [Build and run](docs/BUILD.md).
 
 ## Controls

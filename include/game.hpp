@@ -43,6 +43,11 @@ public:
     std::optional<std::size_t> attachedVehicle() const { return attachedVehicle_; }
     const std::optional<Vehicle>& currentVehicle() const { return currentVehicle_; }
     double remainingRideDistance() const { return remainingRideDistance_; }
+    double currentRideDuration() const {
+        return currentVehicle_ ? player_.config().vehicleSpecs[static_cast<std::size_t>(currentVehicle_->type)].rideServiceDuration : 0;
+    }
+    double remainingRideTime() const { return currentVehicle_ ? remainingRideDistance_ / currentVehicle_->speed : 0; }
+    double elapsedRideTime() const { return currentRideDuration() - remainingRideTime(); }
     bool returningFromService() const { return returningFromService_; }
     bool vehicleConsumed(std::size_t id) const { return rideRemainingById_.contains(id); }
     // Compatibility name used by the traffic planner: a connection is consumed

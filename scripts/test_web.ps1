@@ -5,7 +5,7 @@ $env:EMSDK_QUIET = '1'
 $buildDir = Join-Path $ProjectRoot 'build/wasm-tests'
 New-Item -ItemType Directory -Force -Path $buildDir | Out-Null
 $sources = @(Get-ChildItem (Join-Path $ProjectRoot 'src/gameplay/*.cpp') | ForEach-Object { $_.FullName })
-foreach ($name in @('movement_feel','traffic_service','time_attack')) {
+foreach ($name in @('movement_feel','traffic_service','time_attack','ride_duration')) {
     $output = Join-Path $buildDir "$name.js"
     # Large test main functions retain multiple traffic/RNG fixtures on stack.
     # This stack size is test-only; the playable application's link is unchanged.

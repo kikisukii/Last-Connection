@@ -173,3 +173,17 @@ The owner explicitly authorized Public visibility. GitHub confirmed the change a
 **Change:** Published source commit `305e9aa` while preserving initial commit `e12e53a`; enabled official Actions Pages deployment; added the verified README play link and retained browser results/screenshots. The `v0.1-playtest` milestone records this verified prototype. No gameplay code or parameters changed.
 
 **Result:** [Actions run 42805243312](https://github.com/kikisukii/Last-Connection/actions/runs/42805243312) passed Build Web, Deploy Pages and Verify public browser demo. The packaged local site and [public Pages URL](https://kikisukii.github.io/Last-Connection/) both loaded real WASM in clean contexts, accepted both arrow directions, caught/followed Bike, returned to CENTER, finished a complete race, displayed rank F and retained Best Time after reload. Finish times were 98.7278 and 98.7611 game seconds; no page errors. Public screenshots were inspected for SUCCESS, rank F and persisted best. See `FIRST_PLAYABLE.md` and its evidence links. Desktop Edge full-run automation remained unavailable due to the URL-identification guard; isolated CI browser verification is not represented as manual playtesting. The owner already accepted this gameplay milestone; further balance remains subject to external playtesting.
+
+## 2026-11-10 — Ride service duration tuning (pending playtest)
+
+**Problem:** Owner playtest reported momentum snowball from long high-speed rides, reducing subsequent transfer significance.
+
+**Hypothesis:** Bike/Bus/Taxi/Express services of 4/3/2/1.5 simulation seconds may preserve the reward of catching faster vehicles while requiring more meaningful connections. This is a playtest hypothesis, not a verified balance outcome.
+
+**Change:** Made per-type `rideServiceDuration` the single tuning source and derived distance as constant speed times duration (80/96/90/90). Kept the existing exhaustion, consumed-ID, CENTER return and decay behavior. Added elapsed/total/remaining ride-time diagnostics alongside remaining distance. Updated distance-based fixtures and score-rule fingerprint access to use the derived value. No cooldown or scheduler/physics/threshold/Rank/Deadline change.
+
+**Result:** Native and Web builds PASS; Native graphical smoke PASS; 13/13 CTest suites PASS. The new 345-check duration contract passes natively and in WASM; WASM movement/traffic/time suites also pass. Existing 16-seed races all finish, with 28 Express catches, 86 service ends and no overlap/velocity/reuse violations. **Pending playtest** for all five owner questions in [RIDE_SERVICE_DURATION.md](RIDE_SERVICE_DURATION.md). Temporary tuning remains local and uncommitted until the owner confirms this iteration; no public Pages update is claimed.
+
+### Ride duration accepted for publication — 2026-11-10
+
+The owner confirmed the current version after playtesting and explicitly requested updating GitHub Pages. This supersedes the pending/local-only status above. The verified duration/diagnostic/test changes are committed as one meaningful iteration and published through the existing Emscripten 4.0.23 Actions workflow, which tests the packaged site and public URL in fresh Chromium contexts. No further gameplay tuning is included. The original `v0.1-playtest` tag is preserved. Deployment success is determined by the linked repository Actions run, not inferred from the push.

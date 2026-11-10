@@ -1,0 +1,32 @@
+A PASS: 0.40s / 48 steps, adjacent only, input discarded
+B PASS: immediate consumption, current service continues, no reboarding
+C PASS: failed Bus remains unused and eligible for future attempts
+D PASS: Express service ends without penalty, used ID stays excluded
+E/F PASS: 15/s decay with clamp; miss 12->7 and 5/s recovery
+G PASS: all adjacent upgrades feasible; all six direct skips rejected
+Bus contact=0s player=14 diff=18 limit=19 result=SUCCESS
+Bus contact=0.04s player=13.4 diff=18.6 limit=19 result=SUCCESS
+Bus contact=0.0666667s player=13 diff=19 limit=19 result=SUCCESS
+Bus contact=0.08s player=12.8 diff=19.2 limit=19 result=MISS
+Bus contact=0.12s player=12.2 diff=19.8 limit=19 result=MISS
+Bus contact=0.17s player=12 diff=20 limit=19 result=MISS
+Bus contact=0.4s player=12 diff=20 limit=19 result=MISS
+Intersection PASS: early success / late rejection / inclusive boundary / actual snapshot / dt partition / configurable gate
+PASS: 240 V0.3 checks
+A PASS: 12 -> 20 -> 32 -> 45 -> 60; intersection gate
+B PASS: finite Express, exact service event, center return, no miss
+C PASS: Express -> TAXI at 1.98333s, visible lead 1.49167s
+D PASS: left pending cannot stop right
+E PASS: TTC 200/13 = 15.3846; no player velocity input
+F PASS: high-speed miss -> TAXI recovery
+Full-cycle stress: 16 completed runs, 28 Express catches, 86 service ends; constant speeds/no overlap
+Boarding counts Bike/Bus/Taxi/Express: 63/64/33/28
+V0.2 diversity: 5 distinct spawn sequences; cross-lane reservations, per-lane history and actual counts verified
+Prepared -> actual catch: 35
+PASS: 467630 traffic/service checks
+PASS: 56 race clock, exact finish, ranks, late arrival, restart and best-record checks
+BIKE PASS: 4s / 80 units; exact end, retained speed, no miss, CENTER, consumed, next ID
+BUS PASS: 3s / 96 units; exact end, retained speed, no miss, CENTER, consumed, next ID
+TAXI PASS: 2s / 90 units; exact end, retained speed, no miss, CENTER, consumed, next ID
+EXPRESS PASS: 1.5s / 90 units; exact end, retained speed, no miss, CENTER, consumed, next ID
+PASS: 345 ride duration checks
