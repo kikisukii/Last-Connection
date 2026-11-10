@@ -69,6 +69,8 @@ with sync_playwright() as p:
     tested_sizes = [(1400,820),(1024,600),(800,600),(640,480),(640,360),(390,844),(360,640),(320,568)]
     for width,height in tested_sizes:
         page.set_viewport_size({'width':width,'height':height})
+        page.wait_for_function("""() => { const r=document.querySelector('#onboarding .sheet').getBoundingClientRect();
+            return r.top>=0 && r.bottom<=innerHeight+1 && r.left>=0 && r.right<=innerWidth+1; }""",timeout=5000)
         layout = page.evaluate("""() => {
             const sheet=document.querySelector('#onboarding .sheet').getBoundingClientRect();
             const nodes=[...document.querySelectorAll('#onboarding [data-copy], #start')];
@@ -152,7 +154,9 @@ with sync_playwright() as p:
         assert page.locator('#onboarding').is_visible()
         for width,height in tested_sizes:
             page.set_viewport_size({'width':width,'height':height})
-            for selector in ['#onboarding .sheet','#start','#back']:
+            page.wait_for_function("""() => { const r=document.querySelector('#onboarding .sheet').getBoundingClientRect();
+                return r.top>=0 && r.bottom<=innerHeight+1 && r.left>=0 && r.right<=innerWidth+1; }""",timeout=5000)
+            for selector in ['#onboarding .sheet' ,'#start','#back']:
                 rect=page.locator(selector).bounding_box()
                 assert rect['x']>=0 and rect['y']>=0 and rect['x']+rect['width']<=width+1 and rect['y']+rect['height']<=height+1, ('help',width,height,selector,rect)
         page.set_viewport_size({'width':1400,'height':820})

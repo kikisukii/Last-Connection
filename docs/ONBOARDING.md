@@ -4,7 +4,7 @@ Scope: UI/onboarding only, requested for the browser playtest build. The existin
 
 ## Presentation
 
-The first screen is opaque and contains no debug overlay. Native renders three cards with the existing raylib colors/font. Web renders semantic HTML above the canvas with the same copy supplied from `include/onboarding.hpp`; no duplicate translated rules or independently maintained gameplay values are embedded. Desktop cards cover controls/lanes, prediction/boarding, and misses/temporary rides. A common footer explains the deadline and ranks and contains START. Narrow windows stack the cards; short landscape windows put the footer and button side by side. Rank thresholds and deadline seconds are not hardcoded in the tutorial.
+The first screen is opaque and contains no debug overlay. Native renders three cards with the existing raylib colors/font. Web renders semantic HTML above the canvas with the same copy supplied from `include/onboarding.hpp`; no duplicate translated rules or independently maintained gameplay values are embedded. Desktop cards cover controls/lanes, prediction/boarding, and misses/temporary rides. A common footer explains the deadline and ranks and contains START. Narrow windows stack the cards; short landscape windows put the footer and button side by side. A measured fit fallback accounts for operating-system font metrics or unusually short viewports after responsive wrapping; the complete sheet stays inside the available viewport. Rank thresholds and deadline seconds are not hardcoded in the tutorial.
 
 Copy, in reading order:
 

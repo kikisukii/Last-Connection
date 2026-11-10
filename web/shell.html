@@ -150,6 +150,21 @@
     const status=document.getElementById('status');
     const intro=document.getElementById('onboarding'), results=document.getElementById('results');
     const start=document.getElementById('start'), back=document.getElementById('back');
+    // Responsive layout does the wrapping; a measured fallback accommodates
+    // platform font metrics and unusually short windows without clipping.
+    const fitMenus=()=>{
+      for(const menu of [intro,results]) {
+        if(menu.hidden) continue;
+        const sheet=menu.querySelector('.sheet'), css=getComputedStyle(menu);
+        const height=menu.clientHeight-parseFloat(css.paddingTop)-parseFloat(css.paddingBottom);
+        const width=menu.clientWidth-parseFloat(css.paddingLeft)-parseFloat(css.paddingRight);
+        const scale=Math.min(1,height/sheet.offsetHeight,width/sheet.offsetWidth);
+        sheet.style.transform='scale('+scale+')';
+      }
+    };
+    const menuObserver=new ResizeObserver(fitMenus);
+    for(const menu of [intro,results]) menuObserver.observe(menu.querySelector('.sheet'));
+    window.addEventListener('resize',fitMenus);
     const request=action=>{ if(window.Module && Module._request_menu_action) { Module._request_menu_action(action); canvas.focus({preventScroll:true}); } };
     start.addEventListener('click',()=>request(1));
     document.getElementById('again').addEventListener('click',()=>request(1));
@@ -167,6 +182,7 @@
       document.getElementById('result-rank').style.color=rank==='F'?'#ffa100':'var(--accent)';
       document.getElementById('result-best').textContent=best;
       document.getElementById('result-note').textContent=fresh?'NEW PERSONAL BEST':'Try another connection.';
+      fitMenus();
       canvas.focus({preventScroll:true});
     }};
     var Module={canvas,print:(...args)=>console.log(...args),printErr:(...args)=>console.error(...args),
