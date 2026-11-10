@@ -2,6 +2,8 @@
 #include "best_time_storage.hpp"
 #include "frame_clock.hpp"
 #include "road_view.hpp"
+#include "onboarding.hpp"
+#include <string>
 #include <raylib.h>
 #include <algorithm>
 #include <cmath>
@@ -28,8 +30,12 @@ std::optional<double> bestTime;
 bool storageAvailable = true;
 bool resultRecorded = false;
 bool newBest = false;
-bool started = false;
-constexpr Rectangle actionButton{350, 393, 260, 48};
+lc::ui::Flow ui;
+int pendingMenuAction = 0;
+[[maybe_unused]] constexpr Rectangle actionButton{350, 393, 260, 48};
+constexpr Rectangle startButton{550, 620, 260, 48};
+[[maybe_unused]] constexpr Rectangle helpButton{350, 453, 260, 40};
+constexpr Rectangle backButton{850, 620, 160, 48};
 const lc::RoadView roadView(player.config());
 constexpr Color background{18, 24, 33, 255};
 constexpr Color accent{104, 226, 180, 255};
@@ -74,12 +80,97 @@ void drawVehicles(std::span<const lc::Vehicle> vehicles) {
     EndScissorMode();
 }
 
+const char* text(const char* key) {
+    for (const auto& item : lc::ui::copy) if (std::strcmp(key,item.key)==0) return item.text;
+    return "";
+}
+void centered(const char* value, int x, int y, int size, Color color) {
+    DrawText(value,x-MeasureText(value,size)/2,y,size,color);
+}
+int wrapped(const char* value, int x, int y, int width, int size, Color color) {
+    std::string line, word;
+    const std::string input(value);
+    auto addWord = [&] {
+        if (!line.empty() && MeasureText((line+" "+word).c_str(),size)>width) {
+            DrawText(line.c_str(),x,y,size,color); y+=size+8; line.clear();
+        }
+        if (!line.empty()) line+=' ';
+        line+=word; word.clear();
+    };
+    for (char c : input) { if(c==' ') addWord(); else word+=c; }
+    addWord(); DrawText(line.c_str(),x,y,size,color);
+    return y+size+8;
+}
+void button(Rectangle box, const char* label, bool primary=true) {
+    const bool hover=CheckCollisionPointRec(GetMousePosition(),box);
+    DrawRectangleRec(box, primary ? (hover?accent:Color{65,132,112,255}) : Color{29,39,51,255});
+    if(!primary) DrawRectangleLinesEx(box,1,accent);
+    centered(label,static_cast<int>(box.x+box.width/2),static_cast<int>(box.y+box.height/2-10),20,primary?background:accent);
+}
+[[maybe_unused]] void drawOnboarding() {
+    centered(text("title"),680,26,42,RAYWHITE);
+    centered(text("subtitle"),680,78,18,LIGHTGRAY);
+    centered(text("how"),680,112,22,accent);
+    centered(text("goal"),680,145,20,RAYWHITE);
+    for(int x : {40,480,920}) DrawRectangle(x,188,400,302,Color{29,39,51,255});
+    // Vector key arrows avoid missing Unicode glyphs in raylib's default font.
+    for(int x : {66,130}) {
+        DrawRectangleLines(x,210,48,34,accent);
+        centered(x==66?"<":">",x+24,215,24,accent);
+    }
+    wrapped(text("controls"),66,258,350,20,RAYWHITE);
+    DrawText(text("center"),66,322,20,accent);
+    DrawText(text("run"),66,350,20,RAYWHITE);
+    DrawText(text("sides"),66,396,20,accent);
+    wrapped(text("vehicles"),66,424,350,20,RAYWHITE);
+    DrawText(text("predict"),502,212,22,accent);
+    int y=wrapped(text("early"),502,252,354,20,RAYWHITE);
+    wrapped(text("aim"),502,y+6,354,20,RAYWHITE);
+    DrawText(text("boarding"),502,382,20,accent);
+    wrapped(text("automatic"),502,415,354,20,RAYWHITE);
+    DrawText(text("miss"),942,212,22,accent);
+    wrapped(text("recover"),942,252,354,20,RAYWHITE);
+    DrawText(text("temporary"),942,350,20,accent);
+    y=wrapped(text("once"),942,386,354,20,RAYWHITE);
+    wrapped(text("next"),942,y+6,354,20,RAYWHITE);
+    centered(text("deadline"),680,510,21,RAYWHITE);
+    centered(text("rank"),680,540,18,LIGHTGRAY);
+    centered(text("ranks"),680,566,23,accent);
+    centered(text("rankHint"),680,594,16,LIGHTGRAY);
+    button(startButton,ui.screen==lc::ui::Screen::Help?"PLAY AGAIN":"START");
+    if(ui.screen==lc::ui::Screen::Help) button(backButton,"BACK",false);
+    DrawText("LEFT / RIGHT also starts",36,644,16,LIGHTGRAY);
+}
+#ifdef __EMSCRIPTEN__
+EM_JS(void, webCopy, (const char* key, const char* value), {
+    document.querySelectorAll('[data-copy="'+UTF8ToString(key)+'"]').forEach(e=>e.textContent=UTF8ToString(value));
+});
+EM_JS(void, webMenu, (int screen, const char* time, int rank, const char* best, int fresh), {
+    window.lcMenu.show(screen,UTF8ToString(time),String.fromCharCode(rank),UTF8ToString(best),!!fresh);
+});
+void syncWebMenu() {
+    static int previous=-1;
+    const int screen=static_cast<int>(ui.screen);
+    if(previous==screen) return;
+    previous=screen;
+    const auto finish=race.finishTime()?lc::formatRaceTime(*race.finishTime()):"--:--.--";
+    const auto best=bestTime?lc::formatRaceTime(*bestTime):"--:--.--";
+    webMenu(screen,finish.c_str(),race.finished()?race.rank():' ',best.c_str(),newBest);
+}
+#endif
+
 void drawSandbox() {
     const auto vehicles = traffic.current();
     BeginDrawing();
     ClearBackground(background);
+    if(ui.screen==lc::ui::Screen::Start || ui.screen==lc::ui::Screen::Help) {
+#ifndef __EMSCRIPTEN__
+        drawOnboarding();
+#endif
+        EndDrawing(); return;
+    }
     DrawText("LAST CONNECTION", 28, 20, 28, RAYWHITE);
-    DrawText(TextFormat("V0.3 / MOVEMENT FEEL / SEED %u", static_cast<unsigned>(traffic.seed())), 28, 54, 16, LIGHTGRAY);
+    if(ui.debug) DrawText(TextFormat("V0.3 / MOVEMENT FEEL / SEED %u", static_cast<unsigned>(traffic.seed())), 28, 54, 16, LIGHTGRAY);
     DrawText(TextFormat("TIME %s", lc::formatRaceTime(race.elapsed()).c_str()), 600, 18, 22, RAYWHITE);
     DrawText(TextFormat("DEADLINE %s%s", lc::formatRaceTime(config.deadline).c_str(), race.late() ? " / LATE" : ""), 600, 49, 18, race.late() ? ORANGE : LIGHTGRAY);
     for (int lane = -1; lane <= 1; ++lane) {
@@ -103,6 +194,7 @@ void drawSandbox() {
     DrawTriangle(Vector2{x, playerScreenY - 26}, Vector2{x - 6, playerScreenY - 17},
                  Vector2{x + 6, playerScreenY - 17}, accent);
 
+    if(ui.debug) {
     constexpr int debugX = 600;
     DrawText("DEBUG / ON", debugX, 90, 21, accent);
     DrawText(TextFormat("Speed: %.2f / Normal: %.0f", player.forwardSpeed(), player.config().normalRunSpeed), debugX, 119, 18, RAYWHITE);
@@ -222,24 +314,22 @@ void drawSandbox() {
         DrawText(TextFormat("%u",static_cast<unsigned>(prepared[t])),714+t*60,623,15,RAYWHITE);
     }
     DrawText("Active, unconsumed / forecast checked",600,650,14,LIGHTGRAY);
+    } else {
+        DrawText("Move early. Predict the intersection.",600,140,23,accent);
+        DrawText("Every ride is temporary.",600,185,20,RAYWHITE);
+        DrawText("Miss? Keep running and recover.",600,220,20,RAYWHITE);
+    }
+    DrawText("F1: DEBUG",1160,665,14,LIGHTGRAY);
     DrawRectangle(28, 488, 530, 7, Color{54,66,80,255});
     DrawRectangle(28, 488, static_cast<int>(530 * race.progress()), 7, accent);
     DrawText(TextFormat("AIRPORT: %.1f units left / %.0f%%", race.remainingDistance(), race.progress() * 100), 28, 504, 17, RAYWHITE);
     DrawText(TextFormat("BEST %s%s", bestTime ? lc::formatRaceTime(*bestTime).c_str() : "--:--.--", storageAvailable ? "" : " (session)"), 330, 635, 17, accent);
     if (race.late() && !race.finished()) DrawText("MISSED FLIGHT - keep going for your finish time", 28, 75, 14, ORANGE);
 
-    if (!started || race.finished()) {
-        DrawRectangle(0, 0, 1360, 690, Fade(background, .96f));
-        if (!started) {
-            DrawText("LAST CONNECTION", 275, 102, 32, RAYWHITE);
-            DrawText("Reach the airport. Beat your time.", 280, 166, 21, accent);
-            DrawText("LEFT / RIGHT: one lane at a time", 280, 210, 20, RAYWHITE);
-            DrawText("Catch the bright zone during your transfer.", 240, 244, 19, LIGHTGRAY);
-            DrawText(TextFormat("Airport %.0f units / Deadline %s", config.finishDistance,
-                lc::formatRaceTime(config.deadline).c_str()), 260, 288, 19, RAYWHITE);
-            DrawText("Late arrivals still finish, with rank F.", 280, 320, 18, LIGHTGRAY);
-            DrawText(TextFormat("BEST %s", bestTime ? lc::formatRaceTime(*bestTime).c_str() : "--:--.--"), 360, 356, 18, accent);
-        } else {
+    if (ui.screen==lc::ui::Screen::Results) {
+        DrawRectangle(0, 0, 1360, 690, background);
+#ifndef __EMSCRIPTEN__
+
             const Color resultColor = race.rank() == 'F' ? ORANGE : accent;
             const char* headline = race.rank() == 'F' ? "MISSED FLIGHT" : "AIRPORT REACHED";
             DrawText(headline, 480 - MeasureText(headline, 32) / 2, 78, 32, resultColor);
@@ -249,14 +339,11 @@ void drawSandbox() {
             DrawText(time.c_str(), 480 - MeasureText(time.c_str(), 40) / 2, 243, 40, RAYWHITE);
             DrawText(TextFormat("BEST TIME  %s", lc::formatRaceTime(*bestTime).c_str()), 340, 303, 22, accent);
             DrawText(newBest ? "NEW PERSONAL BEST" : "Try another connection.", 350, 342, 18, LIGHTGRAY);
-        }
-        const bool hover = CheckCollisionPointRec(GetMousePosition(), actionButton);
-        DrawRectangleRec(actionButton, hover ? accent : Color{65,132,112,255});
-        const char* label = started ? "RUN AGAIN" : "START RUN";
-        DrawText(label, 480 - MeasureText(label, 23) / 2, 406, 23, background);
-        DrawText("Click the button or press LEFT / RIGHT", 285, 459, 18, LIGHTGRAY);
-        DrawText(storageAvailable ? "Game time / best saved on this device" : "Game time / storage unavailable: best kept for this session",
-            storageAvailable ? 304 : 200, 492, 15, LIGHTGRAY);
+        button(actionButton,"PLAY AGAIN");
+        button(helpButton,"HOW TO PLAY",false);
+        DrawText("Click PLAY AGAIN or press LEFT / RIGHT",285,519,18,LIGHTGRAY);
+        DrawText(storageAvailable?"Best saved on this device":"Best kept for this session",304,554,15,LIGHTGRAY);
+#endif
     }
     EndDrawing();
 }
@@ -265,25 +352,36 @@ void frame() {
     // Consume press events rather than comparing held states. A fast tap can
     // start and end between frames. raylib queues PRESS events, not repeats.
     // Drain the queue now so inputs during a transfer cannot fire on arrival.
-    bool left = false;
-    bool right = false;
-    for (int key = GetKeyPressed(); key != 0; key = GetKeyPressed()) {
-        left = left || key == KEY_LEFT;
-        right = right || key == KEY_RIGHT;
+    bool left=false, right=false, toggleDebug=false;
+    for (int key=GetKeyPressed(); key!=0; key=GetKeyPressed()) {
+        left=left || key==KEY_LEFT;
+        right=right || key==KEY_RIGHT;
+        toggleDebug=toggleDebug || key==KEY_F1;
     }
-    const bool action = (left != right) || (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(GetMousePosition(), actionButton));
-    if (!started || race.finished()) {
-        if (action) {
-            if (started) race.restart(newTrafficSeed());
-            started = true;
-            resultRecorded = false;
-            newBest = false;
-            frameClock = lc::FrameClock(config);
+    bool start=(left!=right) || pendingMenuAction==1;
+    bool help=pendingMenuAction==2, back=pendingMenuAction==3;
+    pendingMenuAction=0;
+#ifndef __EMSCRIPTEN__
+    if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        const auto mouse=GetMousePosition();
+        const bool tutorial=ui.screen==lc::ui::Screen::Start || ui.screen==lc::ui::Screen::Help;
+        start=start || CheckCollisionPointRec(mouse,tutorial?startButton:actionButton);
+        help=help || CheckCollisionPointRec(mouse,helpButton);
+        back=back || CheckCollisionPointRec(mouse,backButton);
+    }
+#endif
+    const auto action=ui.input(start,help,back,toggleDebug);
+    if(action!=lc::ui::Action::None) {
+        if(action==lc::ui::Action::StartRun || action==lc::ui::Action::RestartRun) {
+            if(action==lc::ui::Action::RestartRun) race.restart(newTrafficSeed());
+            resultRecorded=false; newBest=false; frameClock=lc::FrameClock(config);
         }
-        // The start/retry press never also performs a lane transfer, and the
-        // menu's frame delta never enters the new run's time accumulator.
-        drawSandbox();
-        return;
+#ifdef __EMSCRIPTEN__
+        syncWebMenu();
+#endif
+        // A menu input is fully consumed: never transfer or advance simulation
+        // using the menu frame's delta, including keyboard start/restart.
+        drawSandbox(); return;
     }
     if (left != right) race.requestTransfer(left ? -1 : 1);
 
@@ -296,10 +394,19 @@ void frame() {
         newBest = !bestTime || time < *bestTime;
         if (newBest) { bestTime = time; storageAvailable = lc::saveLocalBest(time, config); }
         resultRecorded = true;
+        ui.finish();
     }
+#ifdef __EMSCRIPTEN__
+    syncWebMenu();
+#endif
     drawSandbox();
 }
 }
+#ifdef __EMSCRIPTEN__
+extern "C" EMSCRIPTEN_KEEPALIVE void request_menu_action(int action) {
+    if(action>=1 && action<=3) pendingMenuAction=action;
+}
+#endif
 
 int main(int argc, char** argv) {
     InitWindow(1360, 690, "LAST CONNECTION - Time Attack");
@@ -309,6 +416,8 @@ int main(int argc, char** argv) {
 #ifdef __EMSCRIPTEN__
     (void)argc;
     (void)argv;
+    for(const auto& item : lc::ui::copy) webCopy(item.key,item.text);
+    syncWebMenu();
     emscripten_set_main_loop(frame, 0, 1);
 #else
     SetTargetFPS(60);

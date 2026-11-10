@@ -16,7 +16,9 @@ For local play, see [Build and run](docs/BUILD.md).
 
 ## Controls
 
-**← / →** moves one adjacent lane. Click the canvas to focus. The first key press starts the run. Transfers take 0.40 seconds; inputs during a transfer are discarded. After finishing, press either key or click RUN AGAIN to retry.
+**← / →** moves one adjacent lane. Click **START** or press either arrow to begin; that starting input does not also move lanes. Transfers take 0.40 seconds; inputs during a transfer are discarded. After finishing, press either arrow or click **PLAY AGAIN** to retry immediately. **HOW TO PLAY** reopens the instructions only when requested. **F1** toggles the gameplay debug overlay (off by default).
+
+The start screen explains early prediction, automatic boarding, misses, temporary one-use rides, the airport and ranks. See [Onboarding verification](docs/ONBOARDING.md).
 
 ## Goal
 

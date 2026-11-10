@@ -187,3 +187,13 @@ The owner explicitly authorized Public visibility. GitHub confirmed the change a
 ### Ride duration accepted for publication — 2026-11-10
 
 The owner confirmed the current version after playtesting and explicitly requested updating GitHub Pages. This supersedes the pending/local-only status above. The verified duration/diagnostic/test changes are committed as one meaningful iteration and published through the existing Emscripten 4.0.23 Actions workflow, which tests the packaged site and public URL in fresh Chromium contexts. No further gameplay tuning is included. The original `v0.1-playtest` tag is preserved. Deployment success is determined by the linked repository Actions run, not inferred from the push.
+
+## 2026-11-11 — Start screen / How to Play onboarding
+
+**Problem:** New players need to understand early intersection prediction, automatic boarding, recoverable misses and temporary one-use rides before playing; the old dimmed debug background and sparse start text do not explain these rules.
+
+**Hypothesis:** Three short visual groups, a highlighted prediction instruction, clear START and optional post-run help can teach the core rules without adding controls or forcing repeat tutorials.
+
+**Change:** Shared English onboarding copy and UI-only menu state, clean Native start screen, responsive semantic Web menu/result layers, optional HOW TO PLAY/BACK, direct PLAY AGAIN, start-input consumption and opt-in F1 debug. Added shell build dependency and UI/browser regression coverage. All gameplay/config files remain unchanged.
+
+**Result:** Native/Web builds and Native graphical startup pass; 14/14 CTest suites pass. Eight Web viewport sizes and mouse/left/right starts pass with no extra lateral movement. A complete isolated local Chromium run also passes real boarding, finish/rank, optional help/back, direct replay without tutorial/transfer, and best persistence with no page errors. Public deployment is explicitly part of the requested UX verification and uses the existing build/test/deploy/verify pipeline. See [ONBOARDING.md](ONBOARDING.md) for copy, screenshot evidence and verification scope. **Pending playtest** for newcomer comprehension, not for gameplay tuning.

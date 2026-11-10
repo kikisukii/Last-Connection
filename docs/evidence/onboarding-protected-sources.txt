@@ -1,0 +1,23 @@
+Compared with commit 71edd5d: all existing include/*.hpp and src/gameplay/*.cpp are byte-identical after line-ending normalization.
+src/gameplay/catch_detection.cpp
+src/gameplay/encounter_planner.cpp
+src/gameplay/forward_motion.cpp
+src/gameplay/game.cpp
+src/gameplay/live_traffic.cpp
+src/gameplay/movement.cpp
+src/gameplay/time_attack.cpp
+src/gameplay/traffic_safety.cpp
+src/gameplay/vehicles.cpp
+include/best_time_storage.hpp
+include/catch_detection.hpp
+include/encounter_planner.hpp
+include/forward_motion.hpp
+include/frame_clock.hpp
+include/game.hpp
+include/gameplay_config.hpp
+include/live_traffic.hpp
+include/movement.hpp
+include/road_view.hpp
+include/time_attack.hpp
+include/traffic_safety.hpp
+include/vehicles.hpp

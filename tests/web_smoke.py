@@ -16,6 +16,7 @@ from playwright.sync_api import sync_playwright
 parser = argparse.ArgumentParser()
 parser.add_argument('url')
 parser.add_argument('--output', type=Path, default=Path('build/browser-evidence'))
+parser.add_argument('--ui-only', action='store_true', help='Only onboarding/layout/input checks')
 args = parser.parse_args()
 args.output.mkdir(parents=True, exist_ok=True)
 
@@ -50,8 +51,60 @@ with sync_playwright() as p:
     canvas = page.locator('#canvas')
     assert canvas.get_attribute('width') == '1360'
     assert page.evaluate("localStorage.getItem('last-connection-best-v1')") is None
-    canvas.screenshot(path=str(args.output/'start.png'))
-    canvas.press('ArrowLeft')  # start only
+    page.locator('body[data-ready="true"]').wait_for()
+    assert page.locator('#onboarding').is_visible() and not page.locator('#results').is_visible()
+    assert page.locator('#start').inner_text() == 'START'
+    expected = ["HOW TO PLAY", "REACH THE AIRPORT AS FAST AS YOU CAN.",
+                "CHANGE TO AN ADJACENT LANE", "Run at normal speed.",
+                "Ride passing vehicles to gain speed.", "PREDICT THE INTERSECTION",
+                "Don't wait until you're next to a vehicle.", "Move early and aim for where it will be.",
+                "If your timing and speed are right, you'll board automatically.",
+                "Keep running. You'll lose speed, but you can recover.",
+                "EVERY RIDE IS TEMPORARY.", "Each vehicle can only be used once.",
+                "Look for your next connection.", "REACH THE AIRPORT BEFORE THE DEADLINE.",
+                "Finish faster to improve your rank.", "S = fastest    F = missed flight"]
+    intro = page.locator('#onboarding').inner_text()
+    assert all(' '.join(line.split()) in ' '.join(intro.split()) for line in expected), intro
+    assert not any(word in intro for word in ['DEBUG', 'Vehicle ID', 'Service Distance', '90'])
+    tested_sizes = [(1400,820),(1024,600),(800,600),(640,480),(640,360),(390,844),(360,640),(320,568)]
+    for width,height in tested_sizes:
+        page.set_viewport_size({'width':width,'height':height})
+        layout = page.evaluate("""() => {
+            const sheet=document.querySelector('#onboarding .sheet').getBoundingClientRect();
+            const nodes=[...document.querySelectorAll('#onboarding [data-copy], #start')];
+            return {sheet:{top:sheet.top,bottom:sheet.bottom},
+                scroll:document.documentElement.scrollHeight>innerHeight || document.documentElement.scrollWidth>innerWidth,
+                overflow:nodes.filter(e=>{const r=e.getBoundingClientRect();return r.top<0||r.bottom>innerHeight+1||r.left<0||r.right>innerWidth+1||e.scrollWidth>e.clientWidth+1;}).map(e=>e.textContent)};
+        }""")
+        page.screenshot(path=str(args.output/f'start-{width}x{height}.png'))
+        assert not layout['scroll'] and not layout['overflow'] and layout['sheet']['top']>=0 and layout['sheet']['bottom']<=height+1, (width,height,layout)
+    page.set_viewport_size({'width':1400,'height':820})
+    page.screenshot(path=str(args.output/'start.png'))
+    # Each menu start route consumes the input; no initial side-lane move.
+    for route in ['ArrowLeft','ArrowRight','click']:
+        if route=='click': page.get_by_role('button',name='START',exact=True).click()
+        else: canvas.press(route)
+        page.locator('body[data-screen="playing"]').wait_for()
+        page.wait_for_timeout(500)
+        im=Image.open(io.BytesIO(canvas.screenshot())).convert('RGB')
+        assert near_color(im.getpixel((340,370)),(104,226,180)), ('Start also moved player',route)
+        assert not page.locator('#onboarding').is_visible()
+        page.reload(); page.locator('body[data-ready="true"]').wait_for()
+    canvas.press('ArrowLeft')  # final start only
+    page.locator('body[data-screen="playing"]').wait_for()
+    def debug_pixels():
+        im=Image.open(io.BytesIO(canvas.screenshot())).convert('RGB')
+        return sum(near_color(pixel,(104,226,180)) for pixel in im.crop((600,90,850,110)).get_flattened_data())
+    assert debug_pixels()==0, 'Debug visible by default'
+    canvas.press('F1'); page.wait_for_timeout(60)
+    assert debug_pixels()>20, 'F1 did not enable debug'
+    canvas.press('F1'); page.wait_for_timeout(60)
+    assert debug_pixels()==0, 'F1 did not hide debug'
+    if args.ui_only:
+        assert not errors, errors
+        print(json.dumps({'onboarding':True,'responsive_sizes':tested_sizes,'start_routes':3,'debug_opt_in':True,'page_errors':errors}),flush=True)
+        browser.close()
+        raise SystemExit(0)
     started = time.monotonic()
     lane = None
     try:
@@ -86,21 +139,43 @@ with sync_playwright() as p:
         record = page.evaluate("localStorage.getItem('last-connection-best-v1')")
         finish_time = float(record.splitlines()[1])
         assert 90 < finish_time < 110, finish_time  # one short Bike ride, then run
-        final = Image.open(io.BytesIO(canvas.screenshot(path=str(args.output/'finish.png')))).convert('RGB')
-        orange = sum(near_color(pixel,(255,161,0)) for pixel in final.crop((395,135,590,190)).getdata())
-        assert orange > 50, 'Expected late F result panel'
+        page.locator('body[data-screen="results"]').wait_for()
+        assert page.locator('#result-rank').inner_text()=='RANK F'
+        page.screenshot(path=str(args.output/'finish.png'))
+        shown_time=page.locator('#result-time').inner_text()
+        page.get_by_role('button',name='HOW TO PLAY',exact=True).click()
+        page.locator('body[data-screen="help"]').wait_for()
+        assert page.locator('#onboarding').is_visible()
+        for width,height in tested_sizes:
+            page.set_viewport_size({'width':width,'height':height})
+            for selector in ['#onboarding .sheet','#start','#back']:
+                rect=page.locator(selector).bounding_box()
+                assert rect['x']>=0 and rect['y']>=0 and rect['x']+rect['width']<=width+1 and rect['y']+rect['height']<=height+1, ('help',width,height,selector,rect)
+        page.set_viewport_size({'width':1400,'height':820})
+        page.get_by_role('button',name='BACK' ,exact=True).click()
+        page.locator('body[data-screen="results"]').wait_for()
+        assert page.locator('#result-time').inner_text()==shown_time
+        page.get_by_role('button',name='PLAY AGAIN',exact=True).click()
+        page.locator('body[data-screen="playing"]').wait_for()
+        page.wait_for_timeout(500)
+        restart=Image.open(io.BytesIO(canvas.screenshot(path=str(args.output/'restart.png')))).convert('RGB')
+        assert not page.locator('#onboarding').is_visible(), 'Restart forced tutorial'
+        assert near_color(restart.getpixel((340,370)),(104,226,180)), 'Restart triggered transfer'
         page.reload()
         page.locator('#status').filter(has_text='Prototype running').wait_for(timeout=60000)
         assert page.evaluate("localStorage.getItem('last-connection-best-v1')") == record, 'Best time did not persist'
-        canvas.screenshot(path=str(args.output/'reloaded.png'))
+        page.locator('body[data-ready="true"]').wait_for()
+        page.screenshot(path=str(args.output/'reloaded.png'))
         assert not errors, errors
         result = {'url':args.url,'fresh_context':True,'wasm_http':200,'keyboard_both_directions':True,
                   'bike_boarding_and_following':True,'finish_seconds':finish_time,'expected_rank':'F',
-                  'result_panel_verified':True,'best_persisted_after_reload':True,'page_errors':errors}
+                  'result_panel_verified':True,'best_persisted_after_reload':True,'page_errors':errors,
+                  'onboarding':True,'responsive_sizes':tested_sizes,'start_routes':3,'debug_opt_in':True,
+                  'optional_help_and_back':True,'restart_without_tutorial_or_transfer':True}
         (args.output/'result.json').write_text(json.dumps(result,indent=2)+'\n')
         print(json.dumps(result,indent=2),flush=True)
     except Exception:
-        canvas.screenshot(path=str(args.output/'failure.png'))
+        page.screenshot(path=str(args.output/'failure.png'))
         (args.output/'errors.json').write_text(json.dumps(errors,indent=2))
         raise
     finally:

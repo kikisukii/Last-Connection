@@ -3,33 +3,186 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>LAST CONNECTION — Prototype</title>
+  <title>LAST CONNECTION — Time Attack</title>
   <style>
-    body { margin: 0; background: #121821; color: #e9edf2; font: 16px system-ui; text-align: center; }
-    main { margin: 20px auto; max-width: 1360px; }
-    canvas { display: block; width: 100%; background: #121821; outline: none; }
-    p { color: #b8c2ce; }
+    :root { color-scheme: dark; --bg:#121821; --panel:#1d2733; --ink:#e9edf2; --muted:#b8c2ce; --accent:#68e2b4; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.4 system-ui,sans-serif; }
+    main { height:100vh; height:100dvh; display:grid; place-items:center; }
+    canvas { display:block; width:min(100vw,1360px,calc(100dvh * 1360 / 690)); height:auto; outline:none; }
+    [hidden] { display:none !important; }
+    #status { position:fixed; bottom:4px; left:0; right:0; margin:0; text-align:center; color:var(--muted); font-size:12px; }
+    body[data-screen="playing"] #status, body[data-ready="true"] #status { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
+    .menu { position:fixed; inset:0; background:var(--bg); display:flex; align-items:center; justify-content:center; padding:20px; }
+    .sheet { width:min(1240px,100%); display:flex; flex-direction:column; gap:20px; }
+    header, footer { text-align:center; }
+    h1,h2,h3,p { margin:0; }
+    h1 { font-size:clamp(26px,3.5vw,44px); line-height:1.15; letter-spacing:.04em; }
+    .subtitle { color:var(--muted); letter-spacing:.15em; font-size:13px; margin:7px 0 12px; }
+    h2 { color:var(--accent); font-size:17px; letter-spacing:.1em; margin-bottom:7px; }
+    .goal { font-size:17px; font-weight:600; }
+    .cards { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+    .card { padding:24px; background:var(--panel); border-top:2px solid #344250; }
+    .card.predict { border-top-color:var(--accent); }
+    h3 { color:var(--accent); font-size:17px; margin-bottom:10px; }
+    .card p + p { margin-top:7px; }
+    .section-gap { margin-top:24px; }
+    .keys { color:var(--accent); font-size:26px; font-weight:bold; margin-bottom:7px; }
+    kbd { display:inline-block; border:1px solid #53687a; border-radius:4px; padding:0 11px; font:inherit; }
+    .controls { font-size:14px; font-weight:650; }
+    .lane-map { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; text-align:center; margin:17px 0; font-size:11px; color:var(--muted); }
+    .lane-map span { border:1px solid #53687a; padding:7px 2px; }
+    .lane-map .you { color:var(--accent); border-color:var(--accent); }
+    .lane-copy { font-size:15px; }
+    .lane-copy strong { color:var(--accent); }
+    .deadline { font-weight:650; }
+    .rank-caption { color:var(--muted); font-size:14px; margin-top:4px; }
+    .ranks { color:var(--accent); font-size:24px; letter-spacing:.12em; margin-top:8px; }
+    .rank-hint { color:var(--muted); font-size:13px; }
+    .actions { display:flex; justify-content:center; gap:12px; margin-top:16px; }
+    button { background:var(--accent); color:var(--bg); border:1px solid var(--accent); min-width:190px; padding:12px 24px; font:700 18px system-ui; cursor:pointer; }
+    button.secondary { background:transparent; color:var(--accent); }
+    button:focus-visible { outline:3px solid white; outline-offset:3px; }
+    button:hover { filter:brightness(1.12); }
+    button:disabled { opacity:.45; cursor:wait; }
+    .key-hint { color:var(--muted); font-size:12px; margin-top:7px; }
+    #results .sheet { max-width:640px; text-align:center; gap:16px; }
+    #result-rank { color:var(--accent); font-size:46px; font-weight:700; }
+    #result-time { font-size:40px; }
+    #result-best { color:var(--accent); font-size:24px; }
+    #results p { color:var(--muted); }
+    @media (max-width:900px), (max-height:660px) {
+      .menu { padding:10px; } .sheet { gap:10px; } .card { padding:12px; }
+      .cards { gap:10px; } .card p { font-size:14px; } h3 { font-size:15px; margin-bottom:7px; }
+      .subtitle { margin:4px 0 5px; } .section-gap { margin-top:12px; }
+      .lane-map { margin:8px 0; } .lane-map span { padding:4px 2px; } .actions { margin-top:8px; }
+    }
+    @media (max-width:560px) and (min-height:501px) {
+      .menu { padding:8px 10px; } .sheet { gap:7px; } h1 { font-size:24px; }
+      .subtitle { font-size:10px; margin:4px 0 5px; } h2 { font-size:14px; margin-bottom:4px; }
+      .goal { font-size:12px; } .cards { grid-template-columns:1fr; gap:7px; }
+      .card { padding:8px 10px; } .card p { font-size:12px; line-height:1.3; }
+      h3 { font-size:13px; margin-bottom:4px; } .section-gap { margin-top:8px; }
+      .card p + p { margin-top:3px; } .keys { display:inline; font-size:18px; margin:0 8px 0 0; }
+      .controls { display:inline; font-size:11px; } kbd { padding:0 6px; }
+      .lane-map { display:none; } .lane-copy { margin-top:5px; }
+      .lane-copy br { display:none; } .lane-copy strong { margin-right:6px; }
+      .deadline { font-size:12px; } .rank-caption,.rank-hint { font-size:11px; }
+      .ranks { font-size:18px; margin-top:3px; } .actions { margin-top:8px; }
+      button { font-size:16px; padding:8px 18px; min-width:140px; } .key-hint { font-size:10px; margin-top:4px; }
+    }
+    @media (max-width:560px) and (min-height:501px) and (max-height:620px) {
+      .menu { padding:6px 10px; } .sheet { gap:5px; } h1 { font-size:22px; }
+      .subtitle { font-size:9px; margin:2px 0; } h2 { font-size:12px; margin-bottom:2px; }
+      .goal { font-size:11px; } .cards { gap:5px; } .card { padding:6px 9px; }
+      .card p { font-size:11.5px; line-height:1.25; } h3 { font-size:12px; margin-bottom:3px; }
+      .section-gap { margin-top:5px; } .keys { font-size:16px; margin-right:5px; } kbd { padding:0 4px; }
+      .card .controls { font-size:10px; } .lane-copy { margin-top:4px; }
+      .deadline { font-size:11px; } .rank-caption { margin-top:2px; } .ranks { font-size:16px; }
+      .actions { margin-top:5px; } button { font-size:14px; padding:6px 18px; }
+    }
+    @media (max-height:500px) {
+      .menu { padding:8px; } .sheet { gap:8px; } h1 { font-size:24px; }
+      .subtitle { font-size:10px; margin:2px 0; } h2 { font-size:12px; margin:2px 0; }
+      .goal { font-size:12px; } .card { padding:10px; } h3 { font-size:12px; margin-bottom:5px; }
+      .card p { font-size:12px; line-height:1.3; } .section-gap { margin-top:12px; }
+      .keys { font-size:20px; margin-bottom:4px; } .controls { font-size:11px; }
+      .lane-map { display:none; } .lane-copy { margin-top:10px; }
+      .deadline,.rank-caption,.rank-hint { font-size:11px; } .ranks { font-size:17px; margin-top:2px; }
+      footer .actions { margin-top:5px; } button { padding:6px 20px; font-size:15px; }
+      .key-hint { font-size:10px; margin-top:3px; }
+      #onboarding footer { display:grid; grid-template-columns:1fr 180px; column-gap:10px; }
+      .deadline,.rank-caption,.ranks,.rank-hint { grid-column:1; }
+      #onboarding footer .actions { grid-column:2; grid-row:1 / span 3; align-self:center; margin:0; }
+      #onboarding footer .key-hint { grid-column:2; grid-row:4; }
+      #onboarding footer button { min-width:120px; }
+      body[data-screen="help"] #onboarding footer .actions { flex-direction:column; gap:4px; }
+      .card { padding:8px; } .section-gap { margin-top:8px; }
+      .lane-copy { margin-top:6px; } .card p + p { margin-top:5px; }
+      #results .sheet { gap:6px; } #result-rank { font-size:30px; } #result-time { font-size:28px; }
+    }
   </style>
 </head>
-<body>
-  <main>
-    <canvas id="canvas" width="1360" height="690" tabindex="0" oncontextmenu="event.preventDefault()"></canvas>
-    <p id="status">Loading C++ / WebAssembly prototype…</p>
-  </main>
+<body data-screen="start">
+  <main><canvas id="canvas" width="1360" height="690" tabindex="0" aria-label="LAST CONNECTION game" oncontextmenu="event.preventDefault()"></canvas></main>
+  <section id="onboarding" class="menu" aria-labelledby="game-title">
+    <div class="sheet">
+      <header>
+        <h1 id="game-title" data-copy="title">LAST CONNECTION</h1>
+        <p class="subtitle" data-copy="subtitle"></p>
+        <h2 data-copy="how"></h2><p class="goal" data-copy="goal"></p>
+      </header>
+      <div class="cards">
+        <article class="card">
+          <div class="keys" aria-label="Left and right arrow keys"><kbd>←</kbd> / <kbd>→</kbd></div>
+          <p class="controls" data-copy="controls"></p>
+          <div class="lane-map" aria-hidden="true"><span>LEFT<br>VEHICLES</span><span class="you">CENTER<br>YOU</span><span>RIGHT<br>VEHICLES</span></div>
+          <p class="lane-copy"><strong data-copy="center"></strong><br><span data-copy="run"></span></p>
+          <p class="lane-copy"><strong data-copy="sides"></strong><br><span data-copy="vehicles"></span></p>
+        </article>
+        <article class="card predict">
+          <h3 data-copy="predict"></h3><p data-copy="early"></p><p data-copy="aim"></p>
+          <h3 class="section-gap" data-copy="boarding"></h3><p data-copy="automatic"></p>
+        </article>
+        <article class="card">
+          <h3 data-copy="miss"></h3><p data-copy="recover"></p>
+          <h3 class="section-gap" data-copy="temporary"></h3><p data-copy="once"></p><p data-copy="next"></p>
+        </article>
+      </div>
+      <footer>
+        <p class="deadline" data-copy="deadline"></p><p class="rank-caption" data-copy="rank"></p>
+        <p class="ranks" data-copy="ranks"></p><p class="rank-hint" data-copy="rankHint"></p>
+        <div class="actions"><button id="start" disabled>START</button><button id="back" class="secondary" hidden>BACK</button></div>
+        <p class="key-hint">Click START or press ← / →</p>
+      </footer>
+    </div>
+  </section>
+  <section id="results" class="menu" aria-label="Run result" hidden>
+    <div class="sheet"><h1>RUN COMPLETE</h1><div id="result-rank"></div><div><p>TIME</p><div id="result-time"></div></div>
+      <div><p>BEST</p><div id="result-best"></div></div><p id="result-note"></p>
+      <div class="actions"><button id="again">PLAY AGAIN</button><button id="help" class="secondary">HOW TO PLAY</button></div>
+      <p class="key-hint">← / → also starts your next run.</p>
+    </div>
+  </section>
+  <p id="status" role="status">Loading C++ / WebAssembly prototype…</p>
   <script>
-    const canvas = document.getElementById('canvas');
-    const status = document.getElementById('status');
-    var Module = {
-      canvas,
-      print: (...args) => console.log(...args),
-      printErr: (...args) => console.error(...args),
-      onRuntimeInitialized: () => { status.textContent = 'Prototype running. Click the canvas to focus.'; canvas.focus(); },
-      onAbort: (reason) => { status.textContent = 'Could not start: ' + reason; }
+    const canvas=document.getElementById('canvas');
+    const status=document.getElementById('status');
+    const intro=document.getElementById('onboarding'), results=document.getElementById('results');
+    const start=document.getElementById('start'), back=document.getElementById('back');
+    const request=action=>{ if(window.Module && Module._request_menu_action) { Module._request_menu_action(action); canvas.focus({preventScroll:true}); } };
+    start.addEventListener('click',()=>request(1));
+    document.getElementById('again').addEventListener('click',()=>request(1));
+    document.getElementById('help').addEventListener('click',()=>request(2));
+    back.addEventListener('click',()=>request(3));
+    window.lcMenu={show(screen,time,rank,best,fresh) {
+      const names=['start','playing','results','help'];
+      document.body.dataset.screen=names[screen]; document.body.dataset.ready='true';
+      intro.hidden=screen!==0 && screen!==3; results.hidden=screen!==2;
+      canvas.setAttribute('aria-hidden',screen===1?'false':'true');
+      start.disabled=false; start.textContent=screen===3?'PLAY AGAIN':'START'; back.hidden=screen!==3;
+      intro.querySelector('.key-hint').textContent=screen===3?'Click PLAY AGAIN or press ← / →':'Click START or press ← / →';
+      document.getElementById('result-time').textContent=time;
+      document.getElementById('result-rank').textContent='RANK '+rank;
+      document.getElementById('result-rank').style.color=rank==='F'?'#ffa100':'var(--accent)';
+      document.getElementById('result-best').textContent=best;
+      document.getElementById('result-note').textContent=fresh?'NEW PERSONAL BEST':'Try another connection.';
+      canvas.focus({preventScroll:true});
+    }};
+    var Module={canvas,print:(...args)=>console.log(...args),printErr:(...args)=>console.error(...args),
+      onRuntimeInitialized:()=>{status.textContent='Prototype running. Click the canvas to focus.';canvas.focus({preventScroll:true});},
+      onAbort:reason=>{status.textContent='Could not start: '+reason;document.body.dataset.ready='false';}
     };
-    canvas.addEventListener('click', () => canvas.focus());
-    canvas.addEventListener('keydown', event => {
-      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') event.preventDefault();
-    });
+    canvas.addEventListener('click',()=>canvas.focus({preventScroll:true}));
+    window.addEventListener('keydown',event=>{
+      if(!['ArrowLeft','ArrowRight','Enter',' '].includes(event.key)) return;
+      if(document.body.dataset.screen!=='playing') {
+        event.preventDefault();event.stopImmediatePropagation();
+        if(event.repeat) return;
+        if((event.key==='Enter'||event.key===' ') && event.target instanceof HTMLButtonElement) event.target.click();
+        else request(1);
+      } else if(event.key==='ArrowLeft'||event.key==='ArrowRight') event.preventDefault();
+    },true);
   </script>
   {{{ SCRIPT }}}
 </body>
