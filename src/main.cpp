@@ -218,6 +218,17 @@ void drawSandbox() {
 #endif
         EndDrawing(); return;
     }
+    // Extend only the repeating road background beyond the canvas edges.
+    for (int lane = -1; lane <= 1; ++lane) {
+        const float x = roadCenter + lane * lanePixels;
+        DrawRectangle(static_cast<int>(x - 65), -60, 130, GetScreenHeight() + 120, Color{29, 39, 51, 255});
+        const double offset = std::fmod(player.forwardPosition() * forwardPixelsPerUnit, 60.0);
+        for (float y = -65.0f + static_cast<float>(offset); y < GetScreenHeight() + 60.0f; y += 60.0f) {
+            if (y >= roadTop && y < roadBottom) continue;
+            DrawLine(static_cast<int>(x - 54), static_cast<int>(y), static_cast<int>(x + 54),
+                     static_cast<int>(y), Color{54, 66, 80, 255});
+        }
+    }
     DrawText("LAST CONNECTION", 28, 20, 28, RAYWHITE);
     if(ui.debug) DrawText(TextFormat("V0.3 / MOVEMENT FEEL / SEED %u", static_cast<unsigned>(traffic.seed())), 28, 54, 16, LIGHTGRAY);
     uiDraw(TextFormat("%s %s", text("time"), lc::formatRaceTime(race.elapsed()).c_str()), 600, 18, 22, RAYWHITE);

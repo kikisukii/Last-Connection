@@ -212,3 +212,7 @@ The owner confirmed the current version after playtesting and explicitly request
 **Change:** Added session-only language selection, translated tutorial/HUD/vehicle/lane/result text, UTF-8 Native rendering, responsive HTML menus, SC/JP Noto-derived OFL glyph subsets, packaged font assets and three-language browser deployment gates. Debug remains English. Reload asks for language again; replay retains it. No gameplay/configuration changes.
 
 **Result:** Native GCC/Web builds and 14 CTest suites pass. Native selection and three tutorial screenshots render CJK correctly. Each local fresh Chromium context completes real boarding/follow/release, finish/rank, optional help/back, direct replay and persisted best with no page errors; eight viewport sizes and three start routes pass per language. Public verification follows the authorized commit through the existing Pages workflow. See [LOCALIZATION.md](LOCALIZATION.md) for evidence and test boundaries. **Pending playtest** for readability/comprehension; no balance conclusion is inferred.
+
+## 2026-11-14 — Extend road background vertically
+
+**Problem:** Road panels appear too short. **Hypothesis/Change:** Extend only existing lane background and repeating guide lines beyond both canvas edges. **Result:** Native/Web visual checks pass; lane width, camera, canvas, UI coordinates and gameplay parameters unchanged. **Pending playtest**.
